@@ -5,4 +5,5 @@ fastapi==0.117.1
 pydantic==2.9.2	
 typing
 uvicorn[standard]
+asyncio ==3.4.3
 
