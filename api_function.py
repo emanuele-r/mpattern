@@ -3,16 +3,17 @@ import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
 import time
 import yfinance as yf
+import asyncio
 
 
-def get_data(ticker, start_date, end_date, interval) -> pd.DataFrame:
+async def get_data(ticker, start_date, end_date, interval) -> pd.DataFrame:
     data = yf.download(ticker, start=start_date, end=end_date, interval= interval, multi_level_index=False)
     data.to_csv(f"{ticker}1D.csv")
     return data
 
 
 
-def process_data(ticker : str ="EURUSD")  :
+async def process_data(ticker : str ="EURUSD")  :
     data = pd.read_csv(f"{ticker}1D.csv", usecols=["Date", "Close"])
         
     return data[["Date", "Close"]]
