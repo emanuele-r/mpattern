@@ -4,7 +4,8 @@ from api_function import process_data, optimize_calc, array_with_shift, dynamic_
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Request, Response
-from datetime import datetime, time
+from datetime import datetime
+import time
 import os
 
 
@@ -87,7 +88,7 @@ def read_data(
             return HistoricalPricesResponse(prices=prices)
         else :
             downloaded_data = get_data(ticker, start_date="2008-01-01", end_date=datetime.datetime.now().strftime("%Y-%m-%d"), interval="1d")
-            time.sleep(10)
+            time.sleep(1)
             series =process_data(ticker)
             prices = [
                 HistoricalPrice(date=str(series["Date"][i]), close=float(series["Close"][i]))
