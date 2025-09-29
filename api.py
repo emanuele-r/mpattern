@@ -87,7 +87,7 @@ def read_data(
             ]
             return HistoricalPricesResponse(prices=prices)
         else :
-            downloaded_data = get_data(ticker, start_date="2008-01-01", end_date=datetime.datetime.now().strftime("%Y-%m-%d"), interval="1d")
+            downloaded_data = get_data(ticker, start_date="2008-01-01", end_date=datetime.now().strftime("%Y-%m-%d"), interval="1d")
             time.sleep(1)
             series =process_data(ticker)
             prices = [
