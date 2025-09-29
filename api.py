@@ -7,7 +7,6 @@ from fastapi import Request, Response
 from datetime import datetime
 import time
 import os
-import asyncio
 
 
 app = FastAPI(
@@ -76,30 +75,25 @@ def health_check():
 def read_data(
     ticker: str = Query(..., description="Ticker symbol")):
     """
-    Example usage : GET /historical_prices
+    Example usage : POST /historical_prices?ticker=AAPL  
     """
-    ticker.upper()
+    ticker = ticker.upper()
     try:
-        csv_file = [file for file in os.listdir(".") if file.endswith(".csv")]
-        if  csv_file :
-            data = asyncio.run(process_data(ticker))
-            prices = [
-                HistoricalPrice(date=str(data["Date"][i]), close=float(data["Close"][i]))
-                for i in data.index
-            ]
-            return HistoricalPricesResponse(prices=prices)
-        else :
-            downloaded_data = get_data(ticker, start_date="2008-01-01", end_date=datetime.now().strftime("%Y-%m-%d"), interval="1d")
-            series = asyncio.run(process_data(ticker))
-            prices = [
-                HistoricalPrice(date=str(series["Date"][i]), close=float(series["Close"][i]))
-                for i in data.index
-            ]
-            return HistoricalPricesResponse(prices=prices)
-            
+        if os.path.exists(f"{ticker}1D.csv"):
+            data = process_data(ticker)
+        else:
+            get_data(ticker, start_date="2008-01-01", end_date=datetime.now().strftime("%Y-%m-%d"), interval="1d")
+            data = process_data(ticker)
+
+        prices = [
+            HistoricalPrice(date=str(data["Date"][i]), close=float(data["Close"][i]))
+            for i in data.index
+        ]
+        return HistoricalPricesResponse(prices=prices)
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
 
 
 
