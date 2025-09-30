@@ -29,41 +29,25 @@ app.add_middleware(
     allow_headers=["*"],
 )   
 
+class SubsequenceMatch(BaseModel):
+    dates: List[str]
+    closes: List[float]
+    similarity: float
+
+
+class SubsequenceResponse(BaseModel):
+    matches: List[SubsequenceMatch]
 
 class HistoricalPrice(BaseModel):
     date: str
     close: float
 
 
-class Match(BaseModel):
-    dates: List[str]
-    values: List[float]
-    distance: float
-
-
-class PricesResponse(BaseModel):
-    matches: List[Match]
-
-
 class HistoricalPricesResponse(BaseModel):
     prices: List[HistoricalPrice]
 
 
-class OptimizeResponse(BaseModel):
-    indices: int
-    dates: str
-    values: float
-    similarity : float
 
-
-class PriceMatch(BaseModel):
-    date: str
-    close: float
-    distance: float
-
-
-class PriceMatchResponse(BaseModel):
-    matches: List[PriceMatch]
 
 
 
@@ -107,9 +91,7 @@ def read_data(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-
-
-@app.post("/update_price", response_model=PriceMatchResponse)
+@app.post("/update_price", response_model=SubsequenceResponse)
 def update_date(
     ticker: str = Query(..., description="Ticker symbol"),
     start_date: str = Query(...),
@@ -130,33 +112,29 @@ def update_date(
         )
 
         matches = [
-            PriceMatch(
-                date=str(best_dates[i]),
-                close=float(best_subarray[i]),
-                distance=float(best_distance)
+            SubsequenceMatch(
+                dates=[str(d) for d in best_dates],
+                closes=[float(v) for v in best_subarray],
+                similarity=float(best_distance)
             )
-            for i in range(len(best_subarray))
         ]
 
-        return PriceMatchResponse(matches=matches)
+        return SubsequenceResponse(matches=matches)
 
     except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Update price failed: {str(e)}")
+
         raise HTTPException(status_code=500, detail=str(e))
 
-    
-@app.post("/get_pattern", response_model=PricesResponse)
+@app.post("/get_pattern", response_model=SubsequenceResponse)
 def get_patterns(
-    ticker: str = Query(..., description="Ticker symbol") , 
+    ticker: str = Query(..., description="Ticker symbol"), 
     start_date: str = Query(...),
     end_date: str = Query(...),
     k: int = Query(3, description="Number of top motifs to return"),
     metric: str = Query("l2", description="Distance metric: 'l1' or 'l2'"),
     wrap: bool = Query(True, description="Allow wrapping (circular search)"),
 ):
-    """
-    Example usage:
-    POST /get_pattern?start_date=2025-08-01&end_date=2025-08-31&k=5&metric=l1
-    """
     if start_date >= end_date:
         raise HTTPException(status_code=400, detail="Start date must be less than end date")
 
@@ -167,26 +145,30 @@ def get_patterns(
             get_data(ticker, start_date="2008-01-01", end_date=datetime.now().strftime("%Y-%m-%d"), interval="1d")
             data = process_data(ticker)
         
-        
         query = data.loc[(data["Date"] >= start_date) & (data["Date"] <= end_date), "Close"].values
         array2 = data["Close"].values
         dates = data["Date"].values
 
-        best_indices, best_dates, best_subarrays, best_distances, query, array2 = array_with_shift(query, array2, dates, k=k, metric=metric, wrap=wrap)
+        best_indices, best_dates, best_subarrays, best_distances, query, array2 = array_with_shift(
+            query, array2, dates, k=k, metric=metric, wrap=wrap
+        )
 
+        matches = [
+            SubsequenceMatch(
+                dates=[str(d) for d in dates_],
+                closes=[float(v) for v in values],
+                similarity=float(dist)
+            )
+            for dates_, values, dist in zip(best_dates, best_subarrays, best_distances)
+        ]
 
-        matches = []
-        for dates_, values, dist in zip(best_dates, best_subarrays, best_distances):
-            for d, v in zip(dates_, values):
-                matches.append(
-                    PriceMatch(date=str(d), close=float(v), distance=float(dist))
-                )
+        return SubsequenceResponse(matches=matches)
 
-        return PriceMatchResponse(matches=matches)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Pattern search failed: {str(e)}")
 
-@app.post("/get_dynamic_time_pattern", response_model=PricesResponse)
+
+@app.post("/get_dynamic_time_pattern", response_model=SubsequenceResponse)
 def get_dynamic_pattern(
     ticker: str = Query(..., description="Ticker symbol"),
     start_date: str = Query(...),
@@ -196,11 +178,6 @@ def get_dynamic_pattern(
     wrap: bool = Query(True, description="Allow wrapping (circular search)"), 
     length_tolerance: int = Query(0, description="Maximum length difference between query and reference arrays"),
 ):  
-    """
-    Example usage:
-    POST /get_dynamic_time_pattern?start_date=2025-08-01&end_date=2025-08-31&k=5&metric=l1&ticker=EURUSD
-    """
-    
     if start_date >= end_date:
         raise HTTPException(status_code=400, detail="Start date must be less than end date")
 
@@ -209,20 +186,26 @@ def get_dynamic_pattern(
             data = process_data(ticker)
         else:
             get_data(ticker, start_date="2008-01-01", end_date=datetime.now().strftime("%Y-%m-%d"), interval="1d")
-        data=process_data(ticker)
+            data = process_data(ticker)
+
         query = data.loc[(data["Date"] >= start_date) & (data["Date"] <= end_date), "Close"].values
         array2 = data["Close"].values
         dates = data["Date"].values
 
-        best_indices, best_dates, best_subarrays, best_distances, query, array2 = dynamic_time_warping(query, array2, dates, k=k, metric=metric, wrap=wrap, length_tolerance=length_tolerance)
+        best_indices, best_dates, best_subarrays, best_distances, query, array2 = dynamic_time_warping(
+            query, array2, dates, k=k, metric=metric, wrap=wrap, length_tolerance=length_tolerance
+        )
 
-        matches = []
-        for dates_, values, dist in zip(best_dates, best_subarrays, best_distances):
-            for d, v in zip(dates_, values):
-                matches.append(
-                    PriceMatch(date=str(d), close=float(v), distance=float(dist))
-                )
+        matches = [
+            SubsequenceMatch(
+                dates=[str(d) for d in dates_],
+                closes=[float(v) for v in values],
+                similarity=float(dist)
+            )
+            for dates_, values, dist in zip(best_dates, best_subarrays, best_distances)
+        ]
 
-        return PriceMatchResponse(matches=matches)
+        return SubsequenceResponse(matches=matches)
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"DTW failed: {str(e)}")
