@@ -50,9 +50,21 @@ class HistoricalPricesResponse(BaseModel):
 
 
 class OptimizeResponse(BaseModel):
-    indices: List[int]
-    dates: List[str]
-    values: List[float]
+    indices: int
+    dates: str
+    values: float
+    similarity : float
+
+
+class PriceMatch(BaseModel):
+    date: str
+    close: float
+    distance: float
+
+
+class PriceMatchResponse(BaseModel):
+    matches: List[PriceMatch]
+
 
 
 @app.options("/{rest_of_path:path}")
@@ -97,15 +109,15 @@ def read_data(
 
 
 
-
-
-@app.post("/update_price", response_model=OptimizeResponse)
-def update_date(ticker : str = Query(..., description="Ticker symbol"), start_date: str = Query(...), end_date: str = Query(...)):
-    """
-    Example usage : POST /update_price?start_date=2025-08-01&end_date=2025-08-31
-    """
+@app.post("/update_price", response_model=PriceMatchResponse)
+def update_date(
+    ticker: str = Query(..., description="Ticker symbol"),
+    start_date: str = Query(...),
+    end_date: str = Query(...),
+):
     if start_date >= end_date:
         raise HTTPException(status_code=400, detail="Start date must be less than end date")
+
     try:
         if os.path.exists(f"{ticker}1D.csv"):
             data = process_data(ticker)
@@ -113,17 +125,21 @@ def update_date(ticker : str = Query(..., description="Ticker symbol"), start_da
             get_data(ticker, start_date="2008-01-01", end_date=datetime.now().strftime("%Y-%m-%d"), interval="1d")
             data = process_data(ticker)
             
-        query = data.loc[(data["Date"] >= start_date) & (data["Date"] <= end_date), "Close"].values
-        array2 = data["Close"].values
-        dates = data["Date"].values
-            
-        best_indices, best_dates, best_subarray, query, array2, time_series = optimize_calc(start_date, end_date)
-
-        return OptimizeResponse(
-            indices=[int(idx) for idx in best_indices],
-            dates=[str(d) for d in best_dates],
-            values=[float(v) for v in best_subarray]
+        best_indices, best_dates, best_subarray, query, array2, time_series, best_distance = optimize_calc(
+            ticker, start_date, end_date
         )
+
+        matches = [
+            PriceMatch(
+                date=str(best_dates[i]),
+                close=float(best_subarray[i]),
+                distance=float(best_distance[i])
+            )
+            for i in range(len(best_subarray))
+        ]
+
+        return PriceMatchResponse(matches=matches)
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -159,16 +175,14 @@ def get_patterns(
         best_indices, best_dates, best_subarrays, best_distances, query, array2 = array_with_shift(query, array2, dates, k=k, metric=metric, wrap=wrap)
 
 
-        matches = [
-            Match(
-                dates=[str(d) for d in dates_],
-                values=[float(v) for v in values],
-                distance=float(dist)
-            )
-            for dates_, values, dist in zip(best_dates, best_subarrays, best_distances)
-        ]
+        matches = []
+        for dates_, values, dist in zip(best_dates, best_subarrays, best_distances):
+            for d, v in zip(dates_, values):
+                matches.append(
+                    PriceMatch(date=str(d), close=float(v), distance=float(dist))
+                )
 
-        return PricesResponse(matches=matches)
+        return PriceMatchResponse(matches=matches)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -202,14 +216,13 @@ def get_dynamic_pattern(
 
         best_indices, best_dates, best_subarrays, best_distances, query, array2 = dynamic_time_warping(query, array2, dates, k=k, metric=metric, wrap=wrap, length_tolerance=length_tolerance)
 
-        matches = [
-            Match(
-                dates=[str(d) for d in dates_],
-                values=[float(v) for v in values],
-                distance=float(dist)
-            )
-            for dates_, values, dist in zip(best_dates, best_subarrays, best_distances)
-        ]
-        return PricesResponse(matches=matches)
+        matches = []
+        for dates_, values, dist in zip(best_dates, best_subarrays, best_distances):
+            for d, v in zip(dates_, values):
+                matches.append(
+                    PriceMatch(date=str(d), close=float(v), distance=float(dist))
+                )
+
+        return PriceMatchResponse(matches=matches)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

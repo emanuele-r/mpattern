@@ -68,8 +68,7 @@ def optimize_calc(ticker: str , start_date: str,end_date: str) -> tuple:
     elapsed_time = time.time() - start_time
     print(f"Elapsed time: {elapsed_time:.6f} seconds")
 
-    return best_indices, best_dates, best_subarray, array, array2, data 
-
+    return best_indices, best_dates, best_subarray, array, array2, data , best_distance
 
 
 
