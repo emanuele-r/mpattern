@@ -97,6 +97,7 @@ def update_date(
     start_date: str = Query(...),
     end_date: str = Query(...),
 ):
+    ticke= ticker.upper()
     if start_date >= end_date:
         raise HTTPException(status_code=400, detail="Start date must be less than end date")
 
@@ -111,15 +112,17 @@ def update_date(
             ticker, start_date, end_date
         )
 
-        matches = [
-            SubsequenceMatch(
-                dates=[str(d) for d in best_dates],
-                closes=[float(v) for v in best_subarray],
-                similarity=float(best_distance)
+        prices=[]
+        for i in range(len(best_indices)):
+            prices.append(
+                {
+                    "Date": str(best_dates[i]),
+                    "Close": float(best_subarray[i]),   
+                    "similarity": float(best_distance)
+                }
             )
-        ]
-
-        return SubsequenceResponse(matches=matches)
+               
+        return prices
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Update price failed: {str(e)}")
