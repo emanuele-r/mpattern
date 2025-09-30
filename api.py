@@ -133,7 +133,7 @@ def update_date(
             PriceMatch(
                 date=str(best_dates[i]),
                 close=float(best_subarray[i]),
-                distance=float(best_distance[i])
+                distance=float(best_distance)
             )
             for i in range(len(best_subarray))
         ]
