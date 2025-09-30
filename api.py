@@ -100,13 +100,19 @@ def read_data(
 
 
 @app.post("/update_price", response_model=OptimizeResponse)
-def update_date(start_date: str = Query(...), end_date: str = Query(...)):
+def update_date(ticker : str = Query(..., description="Ticker symbol"), start_date: str = Query(...), end_date: str = Query(...)):
     """
     Example usage : POST /update_price?start_date=2025-08-01&end_date=2025-08-31
     """
     if start_date >= end_date:
         raise HTTPException(status_code=400, detail="Start date must be less than end date")
     try:
+        if os.path.exists(f"{ticker}1D.csv"):
+            data = process_data(ticker)
+        else:
+            get_data(ticker, start_date="2008-01-01", end_date=datetime.now().strftime("%Y-%m-%d"), interval="1d")
+            data = process_data(ticker)
+            
         best_indices, best_dates, best_subarray, query, array2, time_series = optimize_calc(start_date, end_date)
 
         return OptimizeResponse(
@@ -120,12 +126,12 @@ def update_date(start_date: str = Query(...), end_date: str = Query(...)):
     
 @app.post("/get_pattern", response_model=PricesResponse)
 def get_patterns(
+    ticker: str = Query(..., description="Ticker symbol") , 
     start_date: str = Query(...),
     end_date: str = Query(...),
     k: int = Query(3, description="Number of top motifs to return"),
     metric: str = Query("l2", description="Distance metric: 'l1' or 'l2'"),
     wrap: bool = Query(True, description="Allow wrapping (circular search)"),
-    ticker: str = Query(..., description="Ticker symbol") , 
 ):
     """
     Example usage:
@@ -135,7 +141,13 @@ def get_patterns(
         raise HTTPException(status_code=400, detail="Start date must be less than end date")
 
     try:
-        data = process_data()
+        if os.path.exists(f"{ticker}1D.csv"):
+            data = process_data(ticker)
+        else:
+            get_data(ticker, start_date="2008-01-01", end_date=datetime.now().strftime("%Y-%m-%d"), interval="1d")
+            data = process_data(ticker)
+        
+        
         query = data.loc[(data["Date"] >= start_date) & (data["Date"] <= end_date), "Close"].values
         array2 = data["Close"].values
         dates = data["Date"].values
@@ -158,13 +170,13 @@ def get_patterns(
 
 @app.post("/get_dynamic_time_pattern", response_model=PricesResponse)
 def get_dynamic_pattern(
+    ticker: str = Query(..., description="Ticker symbol"),
     start_date: str = Query(...),
     end_date: str = Query(...),
     k: int = Query(3, description="Number of top motifs to return"),
     metric: str = Query("l2", description="Distance metric: 'l1' or 'l2'"),
     wrap: bool = Query(True, description="Allow wrapping (circular search)"), 
     length_tolerance: int = Query(0, description="Maximum length difference between query and reference arrays"),
-    ticker: str = Query(..., description="Ticker symbol")
 ):  
     """
     Example usage:
@@ -175,6 +187,10 @@ def get_dynamic_pattern(
         raise HTTPException(status_code=400, detail="Start date must be less than end date")
 
     try:
+        if os.path.exists(f"{ticker}1D.csv"):
+            data = process_data(ticker)
+        else:
+            get_data(ticker, start_date="2008-01-01", end_date=datetime.now().strftime("%Y-%m-%d"), interval="1d")
         data=process_data(ticker)
         query = data.loc[(data["Date"] >= start_date) & (data["Date"] <= end_date), "Close"].values
         array2 = data["Close"].values
