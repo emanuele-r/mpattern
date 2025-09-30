@@ -113,6 +113,10 @@ def update_date(ticker : str = Query(..., description="Ticker symbol"), start_da
             get_data(ticker, start_date="2008-01-01", end_date=datetime.now().strftime("%Y-%m-%d"), interval="1d")
             data = process_data(ticker)
             
+        query = data.loc[(data["Date"] >= start_date) & (data["Date"] <= end_date), "Close"].values
+        array2 = data["Close"].values
+        dates = data["Date"].values
+            
         best_indices, best_dates, best_subarray, query, array2, time_series = optimize_calc(start_date, end_date)
 
         return OptimizeResponse(

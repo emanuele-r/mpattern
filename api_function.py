@@ -20,7 +20,7 @@ def process_data(ticker : str ="EURUSD")  :
 
 
 
-def optimize_calc(start_date: str,end_date: str) -> tuple:
+def optimize_calc(ticker: str , start_date: str,end_date: str) -> tuple:
 
     """
 
@@ -38,7 +38,7 @@ def optimize_calc(start_date: str,end_date: str) -> tuple:
 
     start_time = time.time()
     
-    data = process_data()
+    data = process_data(ticker)
     data["Date"] = pd.to_datetime(data["Date"])  
     
     start_date = pd.to_datetime(start_date)
