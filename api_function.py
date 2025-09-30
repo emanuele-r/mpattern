@@ -103,12 +103,14 @@ def array_with_shift(array, array2, dates, shift_range: int = 0, k: int = 3, met
     n = len(array2)
 
     if wrap:
-        extended = np.concatenate([array2, array2[:m-1]])  
-        subsequences = sliding_window_view(extended, m)
+        extended_prices = np.concatenate([array2, array2[:m-1]])  
+        subsequences = sliding_window_view(extended_prices, m)
         extended_dates = np.concatenate([dates, dates[:m-1]])
+        source_array = extended_prices
     else:
         subsequences = sliding_window_view(array2, m)
         extended_dates = dates
+        source_array = array2 
 
     if metric == "l1":
         dists = np.sum(np.abs(subsequences - array), axis=1)
@@ -123,7 +125,8 @@ def array_with_shift(array, array2, dates, shift_range: int = 0, k: int = 3, met
     best_distances = dists[best_idx].tolist()
     best_starts = best_idx.tolist()
     best_indices = [list(range(start, start + m)) for start in best_starts]
-    best_subarrays = [array2[start:start+m] for start in best_starts]
+    
+    best_subarrays = [source_array[start:start+m] for start in best_starts]
     best_dates = [extended_dates[start:start+m] for start in best_starts]
 
     return best_indices, best_dates, best_subarrays, best_distances, array, array2
@@ -186,13 +189,17 @@ def dynamic_time_warping(
 
         if wrap:
             extended = np.concatenate([array2, array2[:window_size - 1]])
+            source_array = extended
             subsequences = sliding_window_view(extended, window_size)
             if dates is not None:
                 extended_dates = np.concatenate([dates, dates[:window_size - 1]])
         else:
+            source_array = array2
             subsequences = sliding_window_view(array2, window_size)
             if dates is not None:
                 extended_dates = dates
+        
+        dates_to_slice = extended_dates if dates is not None else None
 
         if window_size != m:
             query_rescaled = np.interp(
@@ -211,12 +218,17 @@ def dynamic_time_warping(
             raise ValueError("metric must be 'l1' or 'l2'")
 
         for start, dist in enumerate(dists):
+            
+            prices = source_array[start:start+window_size] 
+            
+            current_dates = dates_to_slice[start:start+window_size] if dates_to_slice is not None else None
+            
             best_matches.append((
                 start,
                 dist,
                 window_size,
-                subsequences[start],
-                extended_dates[start:start+window_size] if dates is not None else None
+                prices,
+                current_dates
             ))
 
     best_matches = sorted(best_matches, key=lambda x: x[1])[:k]

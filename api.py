@@ -112,22 +112,18 @@ def update_date(
             ticker, start_date, end_date
         )
 
-        prices=[]
-        for i in range(len(best_indices)):
-            prices.append(
-                {
-                    "Date": str(best_dates[i]),
-                    "Close": float(best_subarray[i]),   
-                    "similarity": float(best_distance)
-                }
-            )
+        matches = []
+        match = SubsequenceMatch(
+            dates=[str(d) for d in best_dates],
+            closes=[float(v) for v in best_subarray],
+            similarity=float(best_distance)
+        )
+        matches.append(match)
                
-        return prices
-
+        return SubsequenceResponse(matches=matches)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Update price failed: {str(e)}")
 
-        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/get_pattern", response_model=SubsequenceResponse)
 def get_patterns(
