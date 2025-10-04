@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Query
 from typing import List, Optional
-from api_function import process_data, optimize_calc, array_with_shift, dynamic_time_warping, get_data
+from api_function import process_data, optimize_calc, array_with_shift, dynamic_time_warping, get_data, calculate_query_return
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Request, Response
@@ -33,6 +33,8 @@ class SubsequenceMatch(BaseModel):
     dates: List[str]
     closes: List[float]
     similarity: float
+    query_return: float
+    description : str
 
 
 class SubsequenceResponse(BaseModel):
@@ -148,6 +150,8 @@ def get_patterns(
         array2 = data["Close"].values
         dates = data["Date"].values
 
+        query_return = calculate_query_return(ticker, start_date, end_date)
+        
         best_indices, best_dates, best_subarrays, best_distances, query, array2 = array_with_shift(
             query, array2, dates, k=k, metric=metric, wrap=wrap
         )
@@ -156,7 +160,9 @@ def get_patterns(
             SubsequenceMatch(
                 dates=[str(d) for d in dates_],
                 closes=[float(v) for v in values],
-                similarity=float(dist)
+                similarity=float(dist),
+                query_return=float(query_return),
+                description=""
             )
             for dates_, values, dist in zip(best_dates, best_subarrays, best_distances)
         ]
