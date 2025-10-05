@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Query
 from typing import List, Optional
-from api_function import process_data, optimize_calc, array_with_shift, dynamic_time_warping, get_data, calculate_query_return
+from api_function import process_data, optimize_calc, array_with_shift, dynamic_time_warping, get_data, calculate_query_return, get_ohlc
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Request, Response
@@ -93,6 +93,23 @@ def read_data(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/get_ohlc")
+def get_ohlc(ticker :str  = Query(..., description="Ticker symbol")): 
+    data = get_ohlc(ticker)
+    datas = []
+    datas.append(
+        {
+            "date": str(data["Date"]),
+            "open": float(data["Open"]),
+            "high": float(data["High"]),
+            "low": float(data["Low"]),
+            "close": float(data["Close"]),
+        }
+        for i in data.index
+    )
+    return datas
+    
+    
 @app.post("/update_price", response_model=SubsequenceResponse)
 def update_date(
     ticker: str = Query(..., description="Ticker symbol"),

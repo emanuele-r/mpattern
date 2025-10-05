@@ -17,6 +17,11 @@ def process_data(ticker : str ="EURUSD")  :
         
     return data[["Date", "Close"]]
 
+def get_ohlc(ticker :str ): 
+    data = pd.read_csv(f"{ticker}1D.csv", usecols=["Date", "Open", "High", "Low", "Close"])
+    return data 
+
+
 
 def calculate_query_return(ticker: str, start_date: str, end_date: str) -> float:
     data = process_data(ticker)
