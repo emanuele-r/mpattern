@@ -94,29 +94,24 @@ def read_data(
 
 
 @app.post("/get_ohlc")
-def get_ohlc(ticker :str  = Query(..., description="Ticker symbol")): 
-    """
-    Example usage : POST /get_ohlc?ticker=AAPL  
-    """
-    
+def get_ohlc_endpoint(ticker: str = Query(..., description="Ticker symbol")):
     ticker = ticker.upper()
-    try : 
+    try:
         data = get_ohlc(ticker)
-        datas = []
-        datas.append(
+        datas = [
             {
-                "date": str(data["Date"]),
-                "open": float(data["Open"]),
-                "high": float(data["High"]),
-                "low": float(data["Low"]),
-                "close": float(data["Close"]),
+                "date": str(data["Date"][i]),
+                "open": float(data["Open"][i]),
+                "high": float(data["High"][i]),
+                "low": float(data["Low"][i]),
+                "close": float(data["Close"][i]),
             }
             for i in data.index
-        )
+        ]
+        return datas
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    return datas
-    
+
     
 @app.post("/update_price", response_model=SubsequenceResponse)
 def update_date(
@@ -138,6 +133,8 @@ def update_date(
         best_indices, best_dates, best_subarray, query, array2, time_series, best_distance = optimize_calc(
             ticker, start_date, end_date
         )
+        
+        query_return = calculate_query_return(ticker, start_date, end_date)
 
         matches = []
         match = SubsequenceMatch(

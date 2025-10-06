@@ -26,7 +26,11 @@ def get_ohlc(ticker :str ):
 def calculate_query_return(ticker: str, start_date: str, end_date: str) -> float:
     data = process_data(ticker)
     query = data.loc[(data["Date"] >= start_date) & (data["Date"] <= end_date), "Close"].values
-    query_return = np.divide(query[1:] - query[:-1]) -1 
+    
+    if len(query) <2 : 
+        raise ValueError("Not enough data to calculate return")
+    
+    query_return = (query[1:] / query[:-1]) - 1
     return query_return
 
 
