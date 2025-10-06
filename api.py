@@ -97,7 +97,12 @@ def read_data(
 def get_ohlc_endpoint(ticker: str = Query(..., description="Ticker symbol")):
     ticker = ticker.upper()
     try:
-        data = get_ohlc(ticker)
+        if os.path.exists(f"{ticker}1D.csv"):
+            data = get_ohlc(ticker)
+        else:
+            get_data(ticker, start_date="2008-01-01", end_date=datetime.now().strftime("%Y-%m-%d"), interval="1d")
+            data = get_ohlc(ticker)
+            
         datas = [
             {
                 "date": str(data["Date"][i]),
@@ -134,14 +139,14 @@ def update_date(
             ticker, start_date, end_date
         )
         
-        query_return = calculate_query_return(ticker, start_date, end_date)
+        #query_return = calculate_query_return(ticker, start_date, end_date)
 
         matches = []
         match = SubsequenceMatch(
             dates=[str(d) for d in best_dates],
             closes=[float(v) for v in best_subarray],
             similarity=float(best_distance),
-            query_return=float(query),
+            query_return=float(0),
             description=""
         )
         matches.append(match)
@@ -149,6 +154,7 @@ def update_date(
         return SubsequenceResponse(matches=matches)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Update price failed: {str(e)}")
+
 
 
 @app.post("/get_pattern", response_model=SubsequenceResponse)
@@ -173,13 +179,12 @@ def get_patterns(
         query = data.loc[(data["Date"] >= start_date) & (data["Date"] <= end_date), "Close"].values
         array2 = data["Close"].values
         dates = data["Date"].values
-
-        query_return = calculate_query_return(ticker, start_date, end_date)
         
+        query_return = calculate_query_return(ticker, start_date, end_date)
+
         best_indices, best_dates, best_subarrays, best_distances, query, array2 = array_with_shift(
             query, array2, dates, k=k, metric=metric, wrap=wrap
         )
-        query_return = calculate_query_return(ticker, start_date, end_date)
 
         matches = [
             SubsequenceMatch(
@@ -187,7 +192,7 @@ def get_patterns(
                 closes=[float(v) for v in values],
                 similarity=float(dist),
                 query_return=float(query_return),
-                description=""
+                description= "btc on date"
             )
             for dates_, values, dist in zip(best_dates, best_subarrays, best_distances)
         ]
@@ -196,6 +201,8 @@ def get_patterns(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Pattern search failed: {str(e)}")
+
+
 
 
 @app.post("/get_dynamic_time_pattern", response_model=SubsequenceResponse)
