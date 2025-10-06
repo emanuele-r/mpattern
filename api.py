@@ -95,18 +95,26 @@ def read_data(
 
 @app.post("/get_ohlc")
 def get_ohlc(ticker :str  = Query(..., description="Ticker symbol")): 
-    data = get_ohlc(ticker)
-    datas = []
-    datas.append(
-        {
-            "date": str(data["Date"]),
-            "open": float(data["Open"]),
-            "high": float(data["High"]),
-            "low": float(data["Low"]),
-            "close": float(data["Close"]),
-        }
-        for i in data.index
-    )
+    """
+    Example usage : POST /get_ohlc?ticker=AAPL  
+    """
+    
+    ticker = ticker.upper()
+    try : 
+        data = get_ohlc(ticker)
+        datas = []
+        datas.append(
+            {
+                "date": str(data["Date"]),
+                "open": float(data["Open"]),
+                "high": float(data["High"]),
+                "low": float(data["Low"]),
+                "close": float(data["Close"]),
+            }
+            for i in data.index
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
     return datas
     
     
@@ -116,7 +124,7 @@ def update_date(
     start_date: str = Query(...),
     end_date: str = Query(...),
 ):
-    ticke= ticker.upper()
+    ticker= ticker.upper()
     if start_date >= end_date:
         raise HTTPException(status_code=400, detail="Start date must be less than end date")
 
@@ -135,7 +143,9 @@ def update_date(
         match = SubsequenceMatch(
             dates=[str(d) for d in best_dates],
             closes=[float(v) for v in best_subarray],
-            similarity=float(best_distance)
+            similarity=float(best_distance),
+            query_return=float(query),
+            description=""
         )
         matches.append(match)
                
@@ -172,6 +182,7 @@ def get_patterns(
         best_indices, best_dates, best_subarrays, best_distances, query, array2 = array_with_shift(
             query, array2, dates, k=k, metric=metric, wrap=wrap
         )
+        query_return = calculate_query_return(ticker, start_date, end_date)
 
         matches = [
             SubsequenceMatch(
@@ -217,12 +228,16 @@ def get_dynamic_pattern(
         best_indices, best_dates, best_subarrays, best_distances, query, array2 = dynamic_time_warping(
             query, array2, dates, k=k, metric=metric, wrap=wrap, length_tolerance=length_tolerance
         )
+        
+        query_return = calculate_query_return(ticker, start_date, end_date)
 
         matches = [
             SubsequenceMatch(
                 dates=[str(d) for d in dates_],
                 closes=[float(v) for v in values],
-                similarity=float(dist)
+                similarity=float(dist),
+                query_return=float(query_return),
+                description=""
             )
             for dates_, values, dist in zip(best_dates, best_subarrays, best_distances)
         ]
