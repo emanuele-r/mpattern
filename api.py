@@ -128,7 +128,7 @@ def update_date(
     try:
         if not os.path.exists(f"{ticker}1D.csv"):
             get_data(ticker, start_date="2008-01-01", end_date=datetime.now().strftime("%Y-%m-%d"), interval="1d")
-            data = process_data(ticker)
+        data = process_data(ticker)
             
         best_indices, best_dates, best_subarray, query, array2, time_series, best_distance = optimize_calc(
             ticker, start_date, end_date
@@ -140,8 +140,8 @@ def update_date(
         match = SubsequenceMatch(
             dates=[str(d) for d in best_dates],
             closes=[float(v) for v in best_subarray],
-            similarity=float(best_distance),
-            query_return=float(query_return),
+            similarity=to_float(best_distance),
+            query_return=to_float(query_return),
             description="" 
         )
         matches.append(match)
@@ -167,7 +167,7 @@ def get_patterns(
     try:
         if not os.path.exists(f"{ticker}1D.csv"):
             get_data(ticker, start_date="2008-01-01", end_date=datetime.now().strftime("%Y-%m-%d"), interval="1d")
-            data = process_data(ticker)
+        data = process_data(ticker)
         
         query = data.loc[(data["Date"] >= start_date) & (data["Date"] <= end_date), "Close"].values
         array2 = data["Close"].values
@@ -233,7 +233,7 @@ def get_dynamic_pattern(
                 dates=[str(d) for d in dates_],
                 closes=[float(v) for v in values],
                 similarity=to_float(dist),
-                query_return=to_float(query_return),
+                query_return=[to_float(query_return) for d in query_return],
                 description=""
             )
             for dates_, values, dist in zip(best_dates, best_subarrays, best_distances)
