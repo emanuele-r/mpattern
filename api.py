@@ -1,7 +1,8 @@
 from fastapi import FastAPI, HTTPException, Query
 from typing import List, Optional
-from api_function import process_data, optimize_calc, array_with_shift, dynamic_time_warping, get_data, calculate_query_return, get_ohlc
+from api_function import process_data, optimize_calc, array_with_shift, dynamic_time_warping, get_data, calculate_query_return, get_ohlc, to_float
 from pydantic import BaseModel
+from typing import Union
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Request, Response
 from datetime import datetime
@@ -32,7 +33,7 @@ app.add_middleware(
 class SubsequenceMatch(BaseModel):
     dates: List[str]
     closes: List[float]
-    similarity: float
+    similarity: Optional[Union[float, List[float]]] = None
     query_return: float
     description : str
 
@@ -77,9 +78,7 @@ def read_data(
     """
     ticker = ticker.upper()
     try:
-        if os.path.exists(f"{ticker}1D.csv"):
-            data = process_data(ticker)
-        else:
+        if not os.path.exists(f"{ticker}1D.csv"):
             get_data(ticker, start_date="2008-01-01", end_date=datetime.now().strftime("%Y-%m-%d"), interval="1d")
             data = process_data(ticker)
 
@@ -97,9 +96,7 @@ def read_data(
 def get_ohlc_endpoint(ticker: str = Query(..., description="Ticker symbol")):
     ticker = ticker.upper()
     try:
-        if os.path.exists(f"{ticker}1D.csv"):
-            data = get_ohlc(ticker)
-        else:
+        if not os.path.exists(f"{ticker}1D.csv"):
             get_data(ticker, start_date="2008-01-01", end_date=datetime.now().strftime("%Y-%m-%d"), interval="1d")
             data = get_ohlc(ticker)
             
@@ -129,9 +126,7 @@ def update_date(
         raise HTTPException(status_code=400, detail="Start date must be less than end date")
 
     try:
-        if os.path.exists(f"{ticker}1D.csv"):
-            data = process_data(ticker)
-        else:
+        if not os.path.exists(f"{ticker}1D.csv"):
             get_data(ticker, start_date="2008-01-01", end_date=datetime.now().strftime("%Y-%m-%d"), interval="1d")
             data = process_data(ticker)
             
@@ -170,9 +165,7 @@ def get_patterns(
         raise HTTPException(status_code=400, detail="Start date must be less than end date")
 
     try:
-        if os.path.exists(f"{ticker}1D.csv"):
-            data = process_data(ticker)
-        else:
+        if not os.path.exists(f"{ticker}1D.csv"):
             get_data(ticker, start_date="2008-01-01", end_date=datetime.now().strftime("%Y-%m-%d"), interval="1d")
             data = process_data(ticker)
         
@@ -190,8 +183,8 @@ def get_patterns(
             SubsequenceMatch(
                 dates=[str(d) for d in dates_],
                 closes=[float(v) for v in values],
-                similarity=float(dist),
-                query_return=float(query_return),
+                similarity=to_float(dist),
+                query_return=to_float(query_return),
                 description= "btc on date"
             )
             for dates_, values, dist in zip(best_dates, best_subarrays, best_distances)
@@ -239,8 +232,8 @@ def get_dynamic_pattern(
             SubsequenceMatch(
                 dates=[str(d) for d in dates_],
                 closes=[float(v) for v in values],
-                similarity=float(dist),
-                query_return=float(query_return),
+                similarity=to_float(dist),
+                query_return=to_float(query_return),
                 description=""
             )
             for dates_, values, dist in zip(best_dates, best_subarrays, best_distances)

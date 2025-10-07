@@ -21,7 +21,20 @@ def get_ohlc(ticker :str ):
     data = pd.read_csv(f"{ticker}1D.csv", usecols=["Date", "Open", "High", "Low", "Close"])
     return data 
 
-
+def to_float(x):
+    """Convert NumPy arrays or scalars safely to a Python float or list of floats."""
+    if x is None:
+        return None
+    if isinstance(x, (list, tuple)):
+        return [float(v) for v in x]
+    if isinstance(x, (np.ndarray, np.generic)):
+        if x.ndim == 0:
+            return float(x.item())             
+        elif x.ndim == 1:
+            return [float(v) for v in x]        
+        else:
+            return float(np.mean(x))            
+    return float(x)
 
 def calculate_query_return(ticker: str, start_date: str, end_date: str) -> float:
     data = process_data(ticker)
