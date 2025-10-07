@@ -33,8 +33,8 @@ app.add_middleware(
 class SubsequenceMatch(BaseModel):
     dates: List[str]
     closes: List[float]
-    similarity: Optional[Union[float, List[float]]] = None
-    query_return: float
+    similarity: Union[float, List[float]]
+    query_return: Union[float, List[float]]
     description : str
 
 
@@ -134,15 +134,15 @@ def update_date(
             ticker, start_date, end_date
         )
         
-        #query_return = calculate_query_return(ticker, start_date, end_date)
+        query_return = calculate_query_return(ticker, start_date, end_date)
 
         matches = []
         match = SubsequenceMatch(
             dates=[str(d) for d in best_dates],
             closes=[float(v) for v in best_subarray],
             similarity=float(best_distance),
-            query_return=float(0),
-            description=""
+            query_return=float(query_return),
+            description="" 
         )
         matches.append(match)
                
