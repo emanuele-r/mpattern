@@ -23,7 +23,8 @@ def create_db():
     conn.close()
 
 
-def get_data(ticker, start_date, end_date, interval) -> pd.DataFrame:
+def get_data(ticker, start_date : str = None , end_date : str = None, interval : str =
+ "1d") -> pd.DataFrame:
     data = yf.download(ticker, start=start_date, end=end_date, interval= interval, multi_level_index=False)[["Open", "High", "Low", "Close"]]
     data.reset_index(inplace=True)
     
@@ -45,6 +46,7 @@ def read_db(ticker:str, start_date: str = None , end_date: str = None) -> pd.Dat
             cursor = conn.cursor()
             
             if start_date and end_date is None:
+                get_data(ticker,start_date="2008-01-01", end_date=datetime.now(), interval="1d")
                 cursor.execute(f"SELECT * FROM asset_prices WHERE ticker = '{ticker}'")
                 data = cursor.fetchall()
                 if data[-1][2][:10] != datetime.now():
