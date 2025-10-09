@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Query
 from typing import List, Optional
-from api_function import process_data, optimize_calc, array_with_shift, dynamic_time_warping, get_data, calculate_query_return, get_ohlc, to_float
+from utils import *
 from pydantic import BaseModel
 from typing import Union
 from fastapi.middleware.cors import CORSMiddleware
@@ -70,49 +70,55 @@ async def preflight_handler(request: Request, rest_of_path: str = ""):
 def health_check():
     return {"status": "ok, faggot"}
 
-@app.post("/historical_prices", response_model=HistoricalPricesResponse)
+@app.post("/historical_prices")
 def read_data(
-    ticker: str = Query(..., description="Ticker symbol")):
+    ticker: str = Query(..., description="Ticker symbol"), 
+    start_date : str = Query(default=None, description="Start date interval (Optional)"),
+    end_date : str= Query(default=None, description="End date interval(Optional)")
+    ):
     """
     Example usage : POST /historical_prices?ticker=AAPL  
     """
     ticker = ticker.upper()
     try:
-        if not os.path.exists(f"{ticker}1D.csv"):
-            get_data(ticker, start_date="2008-01-01", end_date=datetime.now().strftime("%Y-%m-%d"), interval="1d")
-            data = process_data(ticker)
-
+        data=read_db(ticker, start_date, end_date)
+            
         prices = [
-            HistoricalPrice(date=str(data["Date"][i]), close=float(data["Close"][i]))
-            for i in data.index
+            {
+                "date": str(data["date"][row]),
+                "close": float(data["close"][row]),
+            }
+            for row in data.index
         ]
-        return HistoricalPricesResponse(prices=prices)
+        return (prices)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
+    
 
 @app.post("/get_ohlc")
-def get_ohlc_endpoint(ticker: str = Query(..., description="Ticker symbol")):
-    ticker = ticker.upper()
+def get_ohlc_endpoint(
+    ticker: str = Query(..., description="Ticker symbol"),
+    start_date : str = Query(default=None, description="Start date interval (Optional)"),
+    end_date : str= Query(default=None, description="End date interval(Optional)")):
+
     try:
-        if not os.path.exists(f"{ticker}1D.csv"):
-            get_data(ticker, start_date="2008-01-01", end_date=datetime.now().strftime("%Y-%m-%d"), interval="1d")
-            data = get_ohlc(ticker)
+        data = read_db(ticker, start_date, end_date)
             
         datas = [
             {
-                "date": str(data["Date"][i]),
-                "open": float(data["Open"][i]),
-                "high": float(data["High"][i]),
-                "low": float(data["Low"][i]),
-                "close": float(data["Close"][i]),
+                "date": str(data["date"][row]),
+                "open": float(data["open"][row]),
+                "high": float(data["high"][row]),
+                "low": float(data["low"][row]),
+                "close": float(data["close"][row]),
             }
-            for i in data.index
+            for row in data.index
         ]
         return datas
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
     
 @app.post("/update_price", response_model=SubsequenceResponse)
@@ -167,7 +173,7 @@ def get_patterns(
     try:
         if not os.path.exists(f"{ticker}1D.csv"):
             get_data(ticker, start_date="2008-01-01", end_date=datetime.now().strftime("%Y-%m-%d"), interval="1d")
-        data = process_data(ticker)
+        data = read_db(ticker)
         
         query = data.loc[(data["Date"] >= start_date) & (data["Date"] <= end_date), "Close"].values
         array2 = data["Close"].values
