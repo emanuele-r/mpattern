@@ -46,29 +46,34 @@ def read_db(ticker:str, start_date: str = None , end_date: str = None) -> pd.Dat
     try :
         with sqlite3.connect('asset_prices.db') as conn :
             cursor = conn.cursor()
-            
+            today_str = datetime.now().strftime("%Y-%m-%d")
+
             if start_date and end_date is None:
-                get_data(ticker,start_date="2008-01-01", end_date=datetime.now(), interval="1d")
-                cursor.execute(f"SELECT * FROM asset_prices WHERE ticker = '{ticker}'")
+                cursor.execute(f"SELECT * FROM asset_prices WHERE ticker = '{ticker}' ORDER BY date ASC")
                 data = cursor.fetchall()
-                if data[-1][2][:10] != datetime.now():
-                    get_data(ticker, data[-1][2][:10], datetime.now().strftime("%Y-%m-%d"), "1d")
-                    cursor.execute(f"SELECT * FROM asset_prices WHERE ticker = '{ticker}'")
-                    data = cursor.fetchall()
-                else :
-                    pass
-            else:
-                cursor.execute(f"SELECT * FROM asset_prices WHERE ticker = '{ticker}' AND date BETWEEN '{start_date}' AND '{end_date}'")
-                data = cursor.fetchall()
-                if data[-1][2][:10] != datetime.now():
-                    get_data(ticker, data[-1][2][:10], datetime.now().strftime("%Y-%m-%d"), "1d")
-                    cursor.execute(f"SELECT * FROM asset_prices WHERE ticker = '{ticker}' AND date BETWEEN '{start_date}' AND '{end_date}'")
-                    data = cursor.fetchall()
-                else :
-                    pass
                 
-              
-            
+                if not data: 
+                    get_data(ticker, start_date="2008-01-01", end_date=today_str, interval="1d")
+                    cursor.execute(f"SELECT * FROM asset_prices WHERE ticker = '{ticker}' ORDER BY date ASC")
+                    data = cursor.fetchall()
+                
+                if data:
+                    last_db_date = data[-1][2][:10]
+                    if last_db_date != today_str:
+                        get_data(ticker, last_db_date, today_str, "1d")
+                        cursor.execute(f"SELECT * FROM asset_prices WHERE ticker = '{ticker}' ORDER BY date ASC")
+                        data = cursor.fetchall()
+            else:
+                cursor.execute(f"SELECT * FROM asset_prices WHERE ticker = '{ticker}' AND date BETWEEN '{start_date}' AND '{end_date}' ORDER BY date ASC")
+                data = cursor.fetchall()
+                
+                if data:
+                    last_db_date = data[-1][2][:10]
+                    if last_db_date != today_str:
+                        get_data(ticker, last_db_date, today_str, "1d")
+                        cursor.execute(f"SELECT * FROM asset_prices WHERE ticker = '{ticker}' AND date BETWEEN '{start_date}' AND '{end_date}' ORDER BY date ASC")
+                        data = cursor.fetchall()
+                
             columns = [desc[0] for desc in cursor.description]
             data = pd.DataFrame(data, columns=columns)
              
