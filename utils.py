@@ -22,7 +22,7 @@ def create_db():
     conn.commit()
     conn.close()
     
-create_db()
+
 
 
 def get_data(ticker, start_date : str = None , end_date : str = None, interval : str =
