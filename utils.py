@@ -21,6 +21,8 @@ def create_db():
             timeframe TEXT NOT NULL)''')
     conn.commit()
     conn.close()
+    
+create_db()
 
 
 def get_data(ticker, start_date : str = None , end_date : str = None, interval : str =
@@ -30,7 +32,7 @@ def get_data(ticker, start_date : str = None , end_date : str = None, interval :
     
     data["ticker"] = ticker
     data["timeframe"] = interval
-    create_db()
+ 
     
     data.rename(columns=str.lower, inplace=True)
     
