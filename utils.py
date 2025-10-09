@@ -7,7 +7,7 @@ import sqlite3
 from datetime import datetime
 
 def create_db():
-    conn = sqlite3.connect('/tmp/asset_prices.db')
+    conn = sqlite3.connect('asset_prices.db')
     cursor = conn.cursor()
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS asset_prices (
@@ -36,7 +36,7 @@ def get_data(ticker, start_date : str = None , end_date : str = None, interval :
     
     data.rename(columns=str.lower, inplace=True)
     
-    with sqlite3.connect('/tmp/asset_prices.db') as conn : 
+    with sqlite3.connect('asset_prices.db') as conn : 
         data.to_sql("asset_prices", conn, if_exists="append", index=False)
    
     return data
@@ -44,7 +44,7 @@ def get_data(ticker, start_date : str = None , end_date : str = None, interval :
 def read_db(ticker:str, start_date: str = None , end_date: str = None) -> pd.DataFrame:
     ticker = ticker.upper()
     try :
-        with sqlite3.connect('/tmp/asset_prices.db') as conn :
+        with sqlite3.connect('asset_prices.db') as conn :
             cursor = conn.cursor()
             
             if start_date and end_date is None:
