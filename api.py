@@ -131,7 +131,7 @@ def get_chartData(
     timeFrame : str = Query(..., description="Time frame"),
     symbol :str =Query(..., description="Ticker symbol"),
 ) :
-    
+    return
     
     
 
