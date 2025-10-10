@@ -65,13 +65,14 @@ def read_ticker_list() :
        
     
              
-    return data
+    return 
 
+
+read_ticker_list()
 
 
 def read_db(ticker:str, start_date: str = None , end_date: str = None, timeframe  : str = "1d") -> pd.DataFrame:
     ticker = ticker.upper()
-    columns = ['id', 'ticker', 'date', 'open', 'high', 'low', 'close', 'change', 'category', 'timeframe']
     try :
         with sqlite3.connect('asset_prices.db') as conn :
             create_db()
@@ -90,7 +91,7 @@ def read_db(ticker:str, start_date: str = None , end_date: str = None, timeframe
                         get_data(ticker, start_date=data[-1][2][:10], end_date=datetime.now().strftime("%Y-%m-%d"), timeframe=timeframe)
                         query = cursor.execute("SELECT * FROM asset_prices WHERE ticker = ?", (ticker,))
                         data = cursor.fetchall()
-                    elif timeframe != data[-1][9]:
+                    elif timeframe != data[-1][7]:
                         get_data(ticker, start_date=data[-1][2][:10], end_date=datetime.now().strftime("%Y-%m-%d"), timeframe=timeframe)
                         query = cursor.execute("SELECT * FROM asset_prices WHERE ticker = ?", (ticker,))
                         data = cursor.fetchall()
@@ -110,18 +111,15 @@ def read_db(ticker:str, start_date: str = None , end_date: str = None, timeframe
                         query = cursor.execute("SELECT * FROM asset_prices WHERE ticker = ?", (ticker,))
                         data = cursor.fetchall()
             
-            df = pd.DataFrame(data, columns=columns)
-            df = df.drop_duplicates(subset=['date'], keep='last')
-            df['date'] = pd.to_datetime(df['date'])
-           
-            print(df)
+            data = pd.DataFrame(data, columns=[desc[0] for desc in cursor.description])
+            data.drop_duplicates(inplace=True)
              
-        return df
+        return data
     except Exception as e:
         raise ValueError(f"Error reading database: {e}") 
 
 
-read_db("btc-usd",start_date="2025-01-10", end_date="2025-01-20", timeframe="1d")
+#read_db("btc-usd",start_date="2025-01-10", end_date="2025-01-20", timeframe="1d")
 
 
 
