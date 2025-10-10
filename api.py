@@ -72,16 +72,23 @@ def health_check():
 
 
 @app.get("/get_ticker_list")
-def get_ticker_list():
+def get_tickers():
+   
     try:
-        data = get_ticker_list()
-        prices =[
+        data = read_ticker_list()  #
+        prices = [
             {
-            "category": str(data["category"][row]),
-            "ticker": str(data["ticker"][row]),
-            "price": float(data["price"][row]),
-            "change": float(data["change"][row])
-        }
+                "categoryTypes": {
+                    "category": str(data["category"][row]),
+                    "ticker": str(data["ticker"][row])
+                },
+                "tickers": {
+                    "category": str(data["category"][row]),
+                    "symbol": str(data["ticker"][row]),
+                    "close": float(data["close"][row]),
+                    "change": float(data["change"][row])
+                }
+            }
             for row in data.index
         ]
         
