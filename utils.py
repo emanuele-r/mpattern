@@ -55,12 +55,11 @@ def get_data(ticker :str, start_date:str, end_date:str, timeframe :str) -> pd.Da
 def read_ticker_list() :
     with sqlite3.connect('asset_prices.db') as conn :
         cursor = conn.cursor()
-        cursor.execute("SELECT category, ticker, close, change FROM asset_prices")
+        cursor.execute("SELECT category, ticker, close, change FROM asset_prices  GROUP by ticker")
         data = cursor.fetchall()
         columns = [desc[0] for desc in cursor.description]
         data = pd.DataFrame(data, columns=columns)
-        
-        print(data)
+    
              
     return data
 
