@@ -70,6 +70,27 @@ async def preflight_handler(request: Request, rest_of_path: str = ""):
 def health_check():
     return {"status": "ok, faggot"}
 
+
+@app.get("/get_ticker_list")
+def get_ticker_list():
+    try:
+        data = get_ticker_list()
+        prices =[
+            {
+            "category": str(data["category"][row]),
+            "ticker": str(data["ticker"][row]),
+            "price": float(data["price"][row]),
+            "change": float(data["change"][row])
+        }
+            for row in data.index
+        ]
+        
+        return prices
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 @app.post("/historical_prices")
 def read_data(
     ticker: str = Query(..., description="Ticker symbol"), 

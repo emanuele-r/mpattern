@@ -19,11 +19,15 @@ def create_db():
             high REAL NOT NULL,
             low REAL NOT NULL,
             close REAL NOT NULL,
-            timeframe TEXT NOT NULL)''')
+            change FLOAT ,
+            category TEXT NOT NULL,
+            timeframe TEXT NOT NULL
+            )''')
+    
+    
     conn.commit()
     conn.close()
     return
-    
 
 
 def get_data(ticker :str, start_date:str, end_date:str, timeframe :str) -> pd.DataFrame:
@@ -36,12 +40,32 @@ def get_data(ticker :str, start_date:str, end_date:str, timeframe :str) -> pd.Da
        
     data["ticker"] = ticker
     data["timeframe"] = timeframe
+    data["change"]= data["close"].shift(-1) / data["close"] - 1
+    data["category"] = "example"
     create_db()
     
-    with sqlite3.connect('asset_prices.db') as conn : 
+    with sqlite3.connect('asset_prices.db') as conn:
+        cursor = conn.cursor()
         data.to_sql("asset_prices", conn, if_exists="append", index=False)
-   
+
     return data
+
+
+
+def read_ticker_list() :
+    with sqlite3.connect('asset_prices.db') as conn :
+        cursor = conn.cursor()
+        cursor.execute("SELECT category, ticker, close, change FROM asset_prices")
+        data = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+        data = pd.DataFrame(data, columns=columns)
+        
+        print(data)
+             
+    return data
+
+
+read_ticker_list()
 
 
 def read_db(ticker:str, start_date: str = None , end_date: str = None, timeframe  : str = "1d") -> pd.DataFrame:
@@ -93,7 +117,7 @@ def read_db(ticker:str, start_date: str = None , end_date: str = None, timeframe
         raise ValueError(f"Error reading database: {e}") 
 
 
-#read_db("eth-usd",start_date="2025-01-10", end_date="2025-01-20", timeframe="1d")
+#read_db("btc-usd",start_date="2025-01-10", end_date="2025-01-20", timeframe="1d")
 
 
 
