@@ -76,7 +76,6 @@ def get_tickers():
    
     try:
         data = read_ticker_list()  
-        data = data.fillna({"close":0, "change": 0})
         categoryTypes = []
         for row in data.index:
             category= data["category"][row]

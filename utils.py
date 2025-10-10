@@ -113,6 +113,7 @@ def read_db(ticker:str, start_date: str = None , end_date: str = None, timeframe
             
             data = pd.DataFrame(data, columns=[desc[0] for desc in cursor.description])
             data.drop_duplicates(inplace=True)
+            data.dropna(inplace=True)
              
         return data
     except Exception as e:
