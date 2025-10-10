@@ -76,6 +76,7 @@ def get_tickers():
    
     try:
         data = read_ticker_list()  
+        data = data.fillna({"close":0, "change": 0})
         categoryTypes = []
         for row in data.index:
             category= data["category"][row]
@@ -87,7 +88,7 @@ def get_tickers():
             category = data["category"][row]
             symbol = data["ticker"][row]
             price = data["close"][row]
-            change = data["change"][row].fillna(0)
+            change = data["change"][row]
             tickers.append({"category": category, "symbol": symbol, "price": price, "change": change})
         
         prices = {"categoryTypes" : categoryTypes ,  "tickers" : tickers}
@@ -123,6 +124,15 @@ def read_data(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+    
+@app.post("/chartData")
+def get_chartData(
+    timeFrame : str = Query(..., description="Time frame"),
+    symbol :str =Query(..., description="Ticker symbol"),
+) :
+    
+    
     
 
 @app.post("/get_ohlc")
