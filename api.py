@@ -133,7 +133,11 @@ def get_chartData(
 ) :
     try : 
         chartData = []
-        
+        data =read_db(ticker = symbol, timeframe = timeFrame)   
+        for row in data.index:
+            data = data["date"][row]
+            close = data["close"][row]
+            chartData.append({"timeFrame": timeFrame}, {"date": data, "close": close})
         
     
         return chartData
