@@ -119,7 +119,7 @@ def read_db(ticker:str, start_date: str = None , end_date: str = None, timeframe
         raise ValueError(f"Error reading database: {e}") 
 
 
-#read_db("btc-usd",start_date="2025-01-10", end_date="2025-01-20", timeframe="1d")
+read_db("btc-usd",start_date="2025-01-10", end_date="2025-01-20", timeframe="4h")
 
 
 

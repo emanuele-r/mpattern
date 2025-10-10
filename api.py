@@ -104,14 +104,15 @@ def get_tickers():
 def read_data(
     ticker: str = Query(..., description="Ticker symbol"), 
     start_date : str = Query(default=None, description="Start date interval (Optional)"),
-    end_date : str= Query(default=None, description="End date interval(Optional)")
+    end_date : str= Query(default=None, description="End date interval(Optional)"),
+    timeframe :str =Query(default="1d", description="Timeframe (Optional)")
     ):
     """
     Example usage : POST /historical_prices?ticker=AAPL  
     """
     ticker = ticker.upper()
     try:
-        data=read_db(ticker, start_date, end_date)
+        data=read_db(ticker, start_date, end_date, timeframe)
             
         prices = [
             {
