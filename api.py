@@ -76,21 +76,22 @@ def get_tickers():
    
     try:
         data = read_ticker_list()  #
-        prices = [
-            {
-                "categoryTypes": {
-                    "category": str(data["category"][row]),
-                    "ticker": str(data["ticker"][row])
-                },
-                "tickers": {
-                    "category": str(data["category"][row]),
-                    "symbol": str(data["ticker"][row]),
-                    "close": float(data["close"][row]),
-                    "change": float(data["change"][row])
-                }
-            }
-            for row in data.index
-        ]
+        categoryTypes = []
+        for row in data.index:
+            category= data["category"][row]
+            ticker =data["ticker"][row]
+            categoryTypes.append({"category": category, "ticker": ticker})
+        
+        tickers = []
+        for row in data.index :
+            category = data["category"][row]
+            symbol = data["ticker"][row]
+            price = data["close"][row]
+            change = data["change"][row]
+            tickers.append({"category": category, "symbol": symbol, "price": price, "change": change})
+        
+        prices = {"categoryTypes" : categoryTypes ,  "tickers" : tickers}
+       
         
         return prices
     except Exception as e:
