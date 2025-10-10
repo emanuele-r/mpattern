@@ -111,17 +111,19 @@ def read_data(
     Example usage : POST /historical_prices?ticker=AAPL  
     """
     ticker = ticker.upper()
-    try:
+    try : 
         data=read_db(ticker, start_date, end_date, timeframe)
-            
-        prices = [
-            {
-                "date": str(data["date"][row]),
-                "close": float(data["close"][row]),
-            }
-            for row in data.index
-        ]
-        return (prices)
+
+        chartData =  []
+        for row in data.index:
+            data_row = data.loc[row]  
+            chartData.append({
+        "timeframe": timeframe,
+        "date": str(data_row["date"]),
+        "close": float(data_row["close"])
+        })
+        
+        return chartData
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -131,16 +133,20 @@ def read_data(
 def get_chartData(
     timeFrame : str = Query(..., description="Time frame"),
     symbol :str =Query(..., description="Ticker symbol"),
-) :
+    ) :
+    ticker = ticker.upper()
     try : 
-        chartData = []
-        data =read_db(ticker = symbol, timeframe = timeFrame)   
+        data=read_db(symbol,  timeFrame)
+
+        chartData =  []
         for row in data.index:
-            data = data["date"][row]
-            close = data["close"][row]
-            chartData.append({"timeFrame": timeFrame}, {"date": data, "close": close})
+            data_row = data.loc[row]  
+            chartData.append({
+        "timeframe": timeFrame ,
+        "date": str(data_row["date"]),
+        "close": float(data_row["close"])
+        })
         
-    
         return chartData
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -185,7 +191,7 @@ def update_date(
     try:
         if not os.path.exists(f"{ticker}1D.csv"):
             get_data(ticker, start_date="2008-01-01", end_date=datetime.now().strftime("%Y-%m-%d"), interval="1d")
-        data = process_data(ticker)
+        data = read_db(ticker)
             
         best_indices, best_dates, best_subarray, query, array2, time_series, best_distance = optimize_calc(
             ticker, start_date, end_date
