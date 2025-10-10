@@ -131,7 +131,14 @@ def get_chartData(
     timeFrame : str = Query(..., description="Time frame"),
     symbol :str =Query(..., description="Ticker symbol"),
 ) :
-    return
+    try : 
+        chartData = []
+        
+        
+    
+        return chartData
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
     
     
 
