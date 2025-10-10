@@ -178,8 +178,8 @@ def get_ohlc_endpoint(
 
 
     
-@app.post("/update_price", response_model=SubsequenceResponse)
-def update_date(
+@app.post("/get_single_pattern", response_model=SubsequenceResponse)
+def get_single_pattern(
     ticker: str = Query(..., description="Ticker symbol"),
     start_date: str = Query(...),
     end_date: str = Query(...),
@@ -189,9 +189,7 @@ def update_date(
         raise HTTPException(status_code=400, detail="Start date must be less than end date")
 
     try:
-        if not os.path.exists(f"{ticker}1D.csv"):
-            get_data(ticker, start_date="2008-01-01", end_date=datetime.now().strftime("%Y-%m-%d"), interval="1d")
-        data = read_db(ticker)
+        read_db(ticker, start_date, end_date)
             
         best_indices, best_dates, best_subarray, query, array2, time_series, best_distance = optimize_calc(
             ticker, start_date, end_date
@@ -215,7 +213,7 @@ def update_date(
 
 
 
-@app.post("/get_pattern", response_model=SubsequenceResponse)
+@app.post("/get_mutiple_patterns", response_model=SubsequenceResponse)
 def get_patterns(
     ticker: str = Query(..., description="Ticker symbol"), 
     start_date: str = Query(...),
@@ -228,14 +226,13 @@ def get_patterns(
         raise HTTPException(status_code=400, detail="Start date must be less than end date")
 
     try:
-        if not os.path.exists(f"{ticker}1D.csv"):
-            get_data(ticker, start_date="2008-01-01", end_date=datetime.now().strftime("%Y-%m-%d"), interval="1d")
+        
         data = read_db(ticker)
         
-        query = data.loc[(data["Date"] >= start_date) & (data["Date"] <= end_date), "Close"].values
-        array2 = data["Close"].values
-        dates = data["Date"].values
-        
+        query = data.loc[(data["date"] >= start_date) & (data["date"] <= end_date), "close"].values
+        array2 = data["close"].values
+        dates = data["date"].values
+
         query_return = calculate_query_return(ticker, start_date, end_date)
 
         best_indices, best_dates, best_subarrays, best_distances, query, array2 = array_with_shift(

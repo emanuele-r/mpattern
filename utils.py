@@ -68,7 +68,7 @@ def read_ticker_list() :
     return 
 
 
-read_ticker_list()
+#read_ticker_list()
 
 
 def read_db(ticker:str, start_date: str = None , end_date: str = None, timeframe  : str = "1d") -> pd.DataFrame:
@@ -119,7 +119,7 @@ def read_db(ticker:str, start_date: str = None , end_date: str = None, timeframe
         raise ValueError(f"Error reading database: {e}") 
 
 
-read_db("btc-usd",start_date="2025-01-10", end_date="2025-01-20", timeframe="4h")
+#read_db("btc-usd",start_date="2025-01-10", end_date="2025-01-20", timeframe="4h")
 
 
 
@@ -173,16 +173,17 @@ def optimize_calc(ticker: str , start_date: str,end_date: str) -> tuple:
 
     start_time = time.time()
     
-    data = process_data(ticker)
-    data["Date"] = pd.to_datetime(data["Date"])  
+    data = read_db(ticker)
+    
+    data["date"] = pd.to_datetime(data["date"])  
     
     start_date = pd.to_datetime(start_date)
     end_date = pd.to_datetime(end_date)
 
-    mask = (data["Date"] >= start_date) & (data["Date"] <= end_date)
-    array = data.loc[mask, "Close"].values
+    mask = (data["date"] >= start_date) & (data["date"] <= end_date)
+    array = data.loc[mask, "close"].values
 
-    array2 = data["Close"].values
+    array2 = data["close"].values
 
 
     m = len(array)
@@ -198,13 +199,15 @@ def optimize_calc(ticker: str , start_date: str,end_date: str) -> tuple:
     best_indices = list(range(best_start, best_start + m))
     best_subarray = array2[best_start:best_start + m]
 
-    best_dates = data["Date"].iloc[best_indices].tolist()
+    best_dates = data["date"].iloc[best_indices].tolist()
 
     elapsed_time = time.time() - start_time
     print(f"Elapsed time: {elapsed_time:.6f} seconds")
 
     return best_indices, best_dates, best_subarray, array, array2, data , best_distance
 
+
+optimize_calc("btc-usd", "2025-01-10", "2025-01-20")
 
 
 
