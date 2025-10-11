@@ -98,8 +98,6 @@ def get_tickers():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-        
-
 @app.post("/historical_prices")
 def read_data(
     ticker: str = Query(..., description="Ticker symbol"), 
@@ -112,7 +110,7 @@ def read_data(
     """
     ticker = ticker.upper()
     try : 
-        data=read_db(ticker, start_date, end_date, timeframe)
+        data=read_db_v2(ticker, start_date, end_date, timeframe)
 
         chartData =  []
         for row in data.index:
@@ -136,7 +134,7 @@ def get_chartData(
     ) :
     ticker = ticker.upper()
     try : 
-        data=read_db(symbol,  timeFrame)
+        data=read_db_v2(symbol,  timeFrame)
 
         chartData =  []
         for row in data.index:
@@ -160,7 +158,7 @@ def get_ohlc_endpoint(
     end_date : str= Query(default=None, description="End date interval(Optional)")):
 
     try:
-        data = read_db(ticker, start_date, end_date)
+        data = read_db_v2(ticker, start_date, end_date)
             
         datas = [
             {
