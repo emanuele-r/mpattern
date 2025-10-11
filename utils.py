@@ -13,7 +13,7 @@ def create_db():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS asset_prices (
             ticker TEXT NOT NULL,
-            date TEXT ISO8601 ,
+            date TEXT NOT NULL ,
             open REAL NOT NULL,
             high REAL NOT NULL,
             low REAL NOT NULL,
@@ -161,7 +161,8 @@ def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, period:
             
             if not max_date and timeframe != "1d":
                 updated_data =get_data(ticker ,timeframe=timeframe)
-                updated_data.to_sql("asset_prices", conn, if_exists="append", index=False)
+                if not updated_data.empty:
+                    updated_data.to_sql("asset_prices", conn, if_exists="append", index=False)
                 
             elif not max_date :
                 updated_data =get_data(ticker ,start_date="2008-01-01", end_date=today,timeframe=timeframe)
@@ -171,24 +172,26 @@ def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, period:
                 last_date = max_date[:10]  
                 if last_date != today:
                     updated_data = get_data(ticker, start_date=last_date, end_date=today, timeframe=timeframe)
-                    updated_data['date'] = updated_data['date'].astype(str)
-                    cursor.executemany(
+                    if not updated_data.empty:
+                        updated_data['date'] = updated_data['date'].astype(str)
+                        cursor.executemany(
                         """INSERT OR IGNORE INTO asset_prices 
                            (ticker, date, open, high, low, close, change,period,  category, timeframe) 
                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                         updated_data.values.tolist()
-                    )
-                    conn.commit()
+                        )
+                        conn.commit()
             if period : 
                 updated_data = get_data(ticker, start_date=None, end_date=None, period=period, timeframe=timeframe)
-                updated_data['date'] = updated_data['date'].astype(str)
-                cursor.executemany(
+                if not updated_data.empty:
+                    updated_data['date'] = updated_data['date'].astype(str)
+                    cursor.executemany(
                         """INSERT OR IGNORE INTO asset_prices 
                            (ticker, date, open, high, low, close, change, period,category, timeframe) 
                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                         updated_data.values.tolist()
                     )
-                conn.commit()
+                    conn.commit()
                     
                 
              

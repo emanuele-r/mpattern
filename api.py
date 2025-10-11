@@ -197,13 +197,21 @@ def get_patterns(
     k: int = Query(3, description="Number of pattern to return"),
     metric: str = Query("l2", description="Distance metric: 'l1' or 'l2'"),
     wrap: bool = Query(True, description="Allow wrapping (circular search)"),
+    timeframe: str = Query("1d", description="Timeframe for the reference data ('1d', '1h', etc.)") ,
 ):
     if start_date >= end_date:
         raise HTTPException(status_code=400, detail="Start date must be less than end date")
 
     try:
         
-        data = read_db_v2(ticker, start_date, end_date)
+        query_data = read_db_v2(ticker, start_date, end_date)
+        
+        if query_data.empty:
+            raise HTTPException(status_code=404, detail="No data found for the given date range")
+
+        reference_data = read_db_v2(ticker,timeframe)
+        
+        
         
         query = data
         array2 = data["close"].values
