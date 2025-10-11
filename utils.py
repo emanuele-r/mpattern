@@ -53,23 +53,31 @@ def get_data(ticker :str, start_date:str, end_date:str, timeframe :str) -> pd.Da
    
 def read_ticker_list() :
     with sqlite3.connect('asset_prices.db') as conn :
-        cursor = conn.cursor()
-        data = pd.read_sql_query("SELECT category, ticker, close, change FROM asset_prices  GROUP by ticker")
-        columns = [desc[0] for desc in cursor.description]
-        data = pd.DataFrame(data, columns=columns)
-        data.dropna(inplace=True)
+        data = pd.read_sql_query("""
+            SELECT category, ticker, close, change 
+            FROM asset_prices 
+            WHERE rowid IN (
+                SELECT MAX(rowid) 
+                FROM asset_prices 
+                GROUP BY ticker
+            )
+        """, conn)
+        data.dropna(inplace=True)   
         
+        print(data.head())
     return data
 
-#read_ticker_list()
+read_ticker_list()
 
 def read_category():
     with sqlite3.connect('asset_prices.db') as conn :
         data=pd.read_sql_query("SELECT  category FROM asset_prices GROUP by category", conn)
         data .dropna(inplace=True)
+        print(data.head())
     return data
 
-#read_category()
+
+read_category()
 
 def read_db(ticker:str, start_date: str = None , end_date: str = None, timeframe  : str = "1d") -> pd.DataFrame:
     ticker = ticker.upper()
@@ -171,7 +179,7 @@ def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, timefra
         raise ValueError(f"Error reading database: {e}")
 
 
-read_db_v2("sol-usd", start_date="2023-01-01", end_date="2023-01-20", timeframe="1d")
+#read_db_v2("nvda", start_date="2023-01-01", end_date="2023-01-20", timeframe="1d")
 
 
 
