@@ -61,11 +61,10 @@ def read_ticker_list() :
         data = cursor.fetchall()
         columns = [desc[0] for desc in cursor.description]
         data = pd.DataFrame(data, columns=columns)
-        
-       
-    
+        data.dropna(inplace=True)
+        print(data)
              
-    return 
+    return data
 
 
 #read_ticker_list()
@@ -208,7 +207,7 @@ def optimize_calc(ticker: str , start_date: str,end_date: str) -> tuple:
     return best_indices, best_dates, best_subarray, array, array2, data , best_distance
 
 
-optimize_calc("btc-usd", "2025-01-10", "2025-01-20")
+#optimize_calc("btc-usd", "2025-01-10", "2025-01-20")
 
 
 
