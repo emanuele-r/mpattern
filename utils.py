@@ -12,16 +12,16 @@ def create_db():
     cursor = conn.cursor()
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS asset_prices (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
             ticker TEXT NOT NULL,
-            date TEXT NOT NULL,
+            date TEXT ISO8601 NOT NULL,
             open REAL NOT NULL,
             high REAL NOT NULL,
             low REAL NOT NULL,
             close REAL NOT NULL,
             change FLOAT ,
             category TEXT NOT NULL,
-            timeframe TEXT NOT NULL
+            timeframe TEXT NOT NULL,
+            PRIMARY KEY (ticker, date, timeframe)
             )''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS idx_ticker_date 
                          ON asset_prices(ticker, date)''')
@@ -43,12 +43,9 @@ def get_data(ticker :str, start_date:str, end_date:str, timeframe :str) -> pd.Da
     data["ticker"] = ticker
     data["timeframe"] = timeframe
     data["change"]= data["close"].pct_change()
-    data["category"] = "example"
-    create_db()
-    
-    with sqlite3.connect('asset_prices.db') as conn:
-        cursor = conn.cursor()
-        data.to_sql("asset_prices", conn, if_exists="append", index=False)
+    data["category"] = "crypto" if ticker.endswith(("-usd", "-USD")) else "stock"
+
+
 
     return data
 
@@ -57,53 +54,58 @@ def get_data(ticker :str, start_date:str, end_date:str, timeframe :str) -> pd.Da
 def read_ticker_list() :
     with sqlite3.connect('asset_prices.db') as conn :
         cursor = conn.cursor()
-        cursor.execute("SELECT category, ticker, close, change FROM asset_prices  GROUP by ticker")
-        data = cursor.fetchall()
+        data = pd.read_sql_query("SELECT category, ticker, close, change FROM asset_prices  GROUP by ticker")
         columns = [desc[0] for desc in cursor.description]
         data = pd.DataFrame(data, columns=columns)
         data.dropna(inplace=True)
-        print(data)
-             
+        
     return data
-
 
 #read_ticker_list()
 
+def read_category():
+    with sqlite3.connect('asset_prices.db') as conn :
+        data=pd.read_sql_query("SELECT  category FROM asset_prices GROUP by category", conn)
+        data .dropna(inplace=True)
+    return data
+
+#read_category()
 
 def read_db(ticker:str, start_date: str = None , end_date: str = None, timeframe  : str = "1d") -> pd.DataFrame:
     ticker = ticker.upper()
+    today=datetime.now().strftime("%Y-%m-%d")
+    create_db()
     try :
         with sqlite3.connect('asset_prices.db') as conn :
-            create_db()
             cursor = conn.cursor()
             
-            query = cursor.execute("SELECT * FROM asset_prices WHERE ticker = ?", (ticker,))
+            query = cursor.execute("SELECT MAX(date) FROM asset_prices WHERE ticker = ? AND timeframe = ?", (ticker,timeframe))
             data=cursor.fetchall()
             if not data:
-                get_data(ticker, start_date="2008-01-01", end_date=datetime.now().strftime("%Y-%m-%d"), timeframe=timeframe)
+                get_data(ticker, start_date="2008-01-01", end_date=today, timeframe=timeframe)
                 query = cursor.execute("SELECT * FROM asset_prices WHERE ticker = ?", (ticker,))
                 data = cursor.fetchall()
                 
             else:
                 if start_date and end_date:
-                    if data[-1][2][:10] != datetime.now().strftime("%Y-%m-%d"):
-                        get_data(ticker, start_date=data[-1][2][:10], end_date=datetime.now().strftime("%Y-%m-%d"), timeframe=timeframe)
+                    if data[-1][1][:10] != today:
+                        get_data(ticker, start_date=data[-1][1][:10], end_date=today, timeframe=timeframe)
                         query = cursor.execute("SELECT * FROM asset_prices WHERE ticker = ?", (ticker,))
                         data = cursor.fetchall()
                     elif timeframe != data[-1][7]:
-                        get_data(ticker, start_date=data[-1][2][:10], end_date=datetime.now().strftime("%Y-%m-%d"), timeframe=timeframe)
+                        get_data(ticker, start_date=data[-1][1][:10], end_date=today, timeframe=timeframe)
                         query = cursor.execute("SELECT * FROM asset_prices WHERE ticker = ?", (ticker,))
                         data = cursor.fetchall()
                     else:
                         query = cursor.execute("SELECT * FROM asset_prices WHERE ticker = ? AND date BETWEEN ? AND ?", (ticker, start_date, end_date))
                         data = cursor.fetchall()
                 else:
-                    if data[-1][2][:10] != datetime.now().strftime("%Y-%m-%d"):
-                        get_data(ticker, start_date=data[-1][2][:10], end_date=datetime.now().strftime("%Y-%m-%d"), timeframe=timeframe)
+                    if data[-1][1][:10] != today:
+                        get_data(ticker, start_date=data[-1][1][:10], end_date=today, timeframe=timeframe)
                         query = cursor.execute("SELECT * FROM asset_prices WHERE ticker = ?", (ticker,))
                         data = cursor.fetchall()
                     elif timeframe != data[-1][7]:
-                        get_data(ticker, start_date=data[-1][2][:10], end_date=datetime.now().strftime("%Y-%m-%d"), timeframe=timeframe)
+                        get_data(ticker, start_date=data[-1][1][:10], end_date=today, timeframe=timeframe)
                         query = cursor.execute("SELECT * FROM asset_prices WHERE ticker = ?", (ticker,))
                         data = cursor.fetchall()
                     else:
@@ -118,8 +120,61 @@ def read_db(ticker:str, start_date: str = None , end_date: str = None, timeframe
     except Exception as e:
         raise ValueError(f"Error reading database: {e}") 
 
+#read_db("eth-usd", timeframe="1d")
 
-#read_db("btc-usd",start_date="2025-01-10", end_date="2025-01-20", timeframe="4h")
+def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, timeframe: str = "1d") -> pd.DataFrame:
+    ticker = ticker.upper()
+    today = datetime.now().strftime("%Y-%m-%d")
+    create_db()
+    
+    try:
+        with sqlite3.connect('asset_prices.db') as conn:
+            cursor = conn.cursor()
+            
+            cursor.execute("SELECT MAX(date) FROM asset_prices WHERE ticker = ? AND timeframe = ?", (ticker, timeframe))
+            result = cursor.fetchone()
+            max_date = result[0] if result and result[0] else None  
+            
+            if not max_date:
+                updated_data = get_data(ticker, start_date="2008-01-01", end_date=today, timeframe=timeframe)
+                updated_data.to_sql("asset_prices", conn, if_exists="append", index=False)
+                
+            else:
+                last_date = max_date[:10]  
+                if last_date != today:
+                    updated_data = get_data(ticker, start_date=last_date, end_date=today, timeframe=timeframe)
+                    updated_data['date'] = updated_data['date'].astype(str)
+                    cursor.executemany(
+                        """INSERT OR IGNORE INTO asset_prices 
+                           (ticker, date, open, high, low, close, change, category, timeframe) 
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        updated_data.values.tolist()
+                    )
+                    conn.commit()
+                
+             
+            if start_date and end_date:
+                cursor.execute("SELECT * FROM asset_prices WHERE ticker = ? AND timeframe = ? AND date BETWEEN ? AND ?",
+                              (ticker, timeframe, start_date, end_date))
+            else:
+                cursor.execute("SELECT * FROM asset_prices WHERE ticker = ? AND timeframe = ?",
+                              (ticker, timeframe))
+           
+            
+            data = cursor.fetchall()
+            data = pd.DataFrame(data, columns=[desc[0] for desc in cursor.description])
+            data.drop_duplicates(inplace=True)
+            data.dropna(inplace=True)
+            return data
+            
+    except Exception as e:
+        raise ValueError(f"Error reading database: {e}")
+
+
+read_db_v2("sol-usd", start_date="2023-01-01", end_date="2023-01-20", timeframe="1d")
+
+
+
 
 
 

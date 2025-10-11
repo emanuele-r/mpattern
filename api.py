@@ -98,6 +98,7 @@ def get_tickers():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+        
 
 @app.post("/historical_prices")
 def read_data(
