@@ -216,7 +216,7 @@ def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, period:
         raise ValueError(f"Error reading database: {e}")
 
 
-#read_db_v2("eth-usd", timeframe="1d")
+read_db_v2("eth-usd", start_date=None, end_date=None, timeframe="4h")
 
 
 
@@ -392,65 +392,6 @@ def array_with_shift(array, array2, dates, shift_range: int = 0, k: int = 3, met
     best_dates = [extended_dates[start:start+m].tolist() for start in best_starts]
     
     return best_indices, best_dates, best_subarrays, best_distances, array, array2
-
-
-
-
-
-def array_with_shift_shape_based(array, array2, dates, shift_range: int = 0, k: int = 3, metric="l2", wrap=True):
-    """
-    Shape-based motif search using normalized Euclidean distance.
-    This method is invariant to both amplitude scaling and vertical shifts.
-    """
-    array = np.asarray(array, dtype=float)
-    array2 = np.asarray(array2, dtype=float)
-    dates = np.asarray(dates)
-    
-    if len(array) == 0 or len(array2) == 0:
-        raise ValueError("Arrays cannot be empty")
-    if len(array2) < len(array):
-        raise ValueError(f"Reference array too short")
-    if len(dates) != len(array2):
-        raise ValueError(f"Dates must match reference array length")
-    
-    m = len(array)
-    
-    # Normalize query to mean=0, std=1
-    query_normalized = (array - np.mean(array)) / (np.std(array) + 1e-8)
-    
-    # Prepare arrays
-    if wrap:
-        extended_prices = np.concatenate([array2, array2[:m-1]])
-        extended_dates = np.concatenate([dates, dates[:m-1]])
-        source_array = extended_prices
-    else:
-        extended_prices = array2
-        extended_dates = dates
-        source_array = array2
-    
-    subsequences = sliding_window_view(extended_prices, m)
-    
-    # Normalize each subsequence
-    subseq_normalized = (subsequences - np.mean(subsequences, axis=1, keepdims=True)) / \
-                        (np.std(subsequences, axis=1, keepdims=True) + 1e-8)
-    
-    # Calculate normalized Euclidean distance
-    dists = np.sqrt(np.sum((subseq_normalized - query_normalized) ** 2, axis=1))
-    
-    k_actual = min(k, len(dists))
-    best_idx = np.argpartition(dists, k_actual-1)[:k_actual]
-    best_idx = best_idx[np.argsort(dists[best_idx])]
-    
-    best_distances = dists[best_idx].tolist()
-    best_starts = best_idx.tolist()
-    best_indices = [list(range(start, start + m)) for start in best_starts]
-    best_subarrays = [source_array[start:start+m].tolist() for start in best_starts]
-    best_dates = [extended_dates[start:start+m].tolist() for start in best_starts]
-    
-    return best_indices, best_dates, best_subarrays, best_distances, array, array2
-
-
-
 
 
 

@@ -116,7 +116,7 @@ def read_data(
         for row in data.index:
             data_row = data.loc[row]  
             chartData.append({
-        "timeframe": timeframe,
+        "timeframe": data_row["timeframe"],
         "date": str(data_row["date"]),
         "close": float(data_row["close"])
         })
