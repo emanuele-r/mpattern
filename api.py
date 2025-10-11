@@ -211,11 +211,16 @@ def get_patterns(
 
         reference_data = read_db_v2(ticker,timeframe)
         
+        if reference_data.empty:
+            raise HTTPException(status_code=404, detail="No data found for the given date range")
         
         
-        query = data
-        array2 = data["close"].values
-        dates = data["date"].values
+        query_data=query_data.sort_values("date")
+        reference_data=reference_data.sort_values("date")
+        
+        query = query_data["close"].values
+        array2 = reference_data["close"].values
+        dates = reference_data["date"].values
 
         query_return = calculate_query_return(ticker, start_date, end_date)
 

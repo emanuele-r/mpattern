@@ -41,14 +41,12 @@ def get_data(ticker :str, start_date:str = None, end_date:str = None,period :str
     elif timeframe:
         if timeframe.endswith("m"):
             data = yf.download(ticker, period="3mo", interval= timeframe, multi_level_index=False)[["Open", "High", "Low", "Close"]]
-            data.reset_index(inplace=True)
         elif timeframe.endswith("h"):
             data = yf.download(ticker, period="1mo", interval= timeframe, multi_level_index=False)[["Open", "High", "Low", "Close"]]
-            data.reset_index(inplace=True)
         else : 
             data = yf.download(ticker, period="max", interval= timeframe, multi_level_index=False)[["Open", "High", "Low", "Close"]]
-            data.reset_index(inplace=True)
         
+    data.reset_index(inplace=True)
     data.columns=data.columns.str.lower()    
     if 'datetime' in data.columns:
         data.rename(columns={"datetime": "date"}, inplace=True)
@@ -223,7 +221,7 @@ def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, period:
 
 def calculate_query_return(ticker: str, start_date: str, end_date: str) -> float:
     try :
-        query = read_db(ticker, start_date , end_date)
+        query = read_db_v2(ticker, start_date , end_date)
         query_return = (query.close.iat[-1]/ query.close.iat[0]) - 1
 
         if len(query) <2 :
