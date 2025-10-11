@@ -204,7 +204,8 @@ def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, period:
             data = cursor.fetchall()
             data = pd.DataFrame(data, columns=[desc[0] for desc in cursor.description])
             data.drop_duplicates(inplace=True)
-            data.dropna(inplace=True)
+            critical_columns = ['ticker', 'date', 'open', 'high', 'low', 'close', 'category', 'timeframe']
+            data.dropna(subset=critical_columns, inplace=True)
             print(data)
             return data
             
@@ -330,46 +331,120 @@ def array_with_shift(array, array2, dates, shift_range: int = 0, k: int = 3, met
     array = np.asarray(array, dtype=float)
     array2 = np.asarray(array2, dtype=float)
 
+    if len(array) == 0:
+        raise ValueError("Query array is empty")
+    if len(array2) == 0:
+        raise ValueError("Reference array is empty")
     if len(array2) < len(array):
-        return None, None, None, None, array, array2
+        raise ValueError(f"Reference array (len={len(array2)}) is shorter than query array (len={len(array)})")
+    if len(dates) != len(array2):
+        raise ValueError(f"Dates array (len={len(dates)}) must match reference array (len={len(array2)})")
 
     m = len(array)
     n = len(array2)
+    
+    array_mean = np.mean(array)
+    array_std = np.std(array)
+    if array_std > 0:
+        array_normalized = (array - array_mean) / array_std
+    else:
+        array_normalized = array - array_mean
 
     if wrap:
-        extended_prices = np.concatenate([array2, array2[:m-1]])  
-        subsequences = sliding_window_view(extended_prices, m)
+        extended_prices = np.concatenate([array2, array2[:m-1]])
         extended_dates = np.concatenate([dates, dates[:m-1]])
         source_array = extended_prices
     else:
-        subsequences = sliding_window_view(array2, m)
+        extended_prices = array2
         extended_dates = dates
-        source_array = array2 
-
+        source_array = array2
+    
+    subsequences = sliding_window_view(extended_prices, m)
+    
+    subseq_means = np.mean(subsequences, axis=1, keepdims=True)
+    subseq_stds = np.std(subsequences, axis=1, keepdims=True)
+    
+    subseq_stds = np.where(subseq_stds > 0, subseq_stds, 1.0)
+    subsequences_normalized = (subsequences - subseq_means) / subseq_stds
+    
     if metric == "l1":
-        dists = np.sum(np.abs(subsequences - array), axis=1)
+        dists = np.sum(np.abs(subsequences_normalized - array_normalized), axis=1)
     elif metric == "l2":
-        dists = np.sum((subsequences - array) ** 2, axis=1)
+        dists = np.sqrt(np.sum((subsequences_normalized - array_normalized) ** 2, axis=1))
     else:
         raise ValueError("metric must be 'l1' or 'l2'")
-
-    best_idx = np.argpartition(dists, k)[:k]  
-    best_idx = best_idx[np.argsort(dists[best_idx])]
-
+    
+    k_actual = min(k, len(dists))
+    
+    if k_actual > 0:
+        best_idx = np.argpartition(dists, k_actual-1)[:k_actual]
+        best_idx = best_idx[np.argsort(dists[best_idx])]
+    else:
+        best_idx = np.array([], dtype=int)
+    
     best_distances = dists[best_idx].tolist()
     best_starts = best_idx.tolist()
     best_indices = [list(range(start, start + m)) for start in best_starts]
+    best_subarrays = [source_array[start:start+m].tolist() for start in best_starts]
+    best_dates = [extended_dates[start:start+m].tolist() for start in best_starts]
     
-    best_subarrays = [source_array[start:start+m] for start in best_starts]
-    best_dates = [extended_dates[start:start+m] for start in best_starts]
-
     return best_indices, best_dates, best_subarrays, best_distances, array, array2
 
 
 
 
 
-
+def array_with_shift_shape_based(array, array2, dates, shift_range: int = 0, k: int = 3, metric="l2", wrap=True):
+    """
+    Shape-based motif search using normalized Euclidean distance.
+    This method is invariant to both amplitude scaling and vertical shifts.
+    """
+    array = np.asarray(array, dtype=float)
+    array2 = np.asarray(array2, dtype=float)
+    dates = np.asarray(dates)
+    
+    if len(array) == 0 or len(array2) == 0:
+        raise ValueError("Arrays cannot be empty")
+    if len(array2) < len(array):
+        raise ValueError(f"Reference array too short")
+    if len(dates) != len(array2):
+        raise ValueError(f"Dates must match reference array length")
+    
+    m = len(array)
+    
+    # Normalize query to mean=0, std=1
+    query_normalized = (array - np.mean(array)) / (np.std(array) + 1e-8)
+    
+    # Prepare arrays
+    if wrap:
+        extended_prices = np.concatenate([array2, array2[:m-1]])
+        extended_dates = np.concatenate([dates, dates[:m-1]])
+        source_array = extended_prices
+    else:
+        extended_prices = array2
+        extended_dates = dates
+        source_array = array2
+    
+    subsequences = sliding_window_view(extended_prices, m)
+    
+    # Normalize each subsequence
+    subseq_normalized = (subsequences - np.mean(subsequences, axis=1, keepdims=True)) / \
+                        (np.std(subsequences, axis=1, keepdims=True) + 1e-8)
+    
+    # Calculate normalized Euclidean distance
+    dists = np.sqrt(np.sum((subseq_normalized - query_normalized) ** 2, axis=1))
+    
+    k_actual = min(k, len(dists))
+    best_idx = np.argpartition(dists, k_actual-1)[:k_actual]
+    best_idx = best_idx[np.argsort(dists[best_idx])]
+    
+    best_distances = dists[best_idx].tolist()
+    best_starts = best_idx.tolist()
+    best_indices = [list(range(start, start + m)) for start in best_starts]
+    best_subarrays = [source_array[start:start+m].tolist() for start in best_starts]
+    best_dates = [extended_dates[start:start+m].tolist() for start in best_starts]
+    
+    return best_indices, best_dates, best_subarrays, best_distances, array, array2
 
 
 

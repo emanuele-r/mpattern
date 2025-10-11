@@ -204,7 +204,7 @@ def get_patterns(
 
     try:
         
-        query_data = read_db_v2(ticker, start_date, end_date)
+        query_data = read_db_v2(ticker, start_date, end_date, timeframe)
         
         if query_data.empty:
             raise HTTPException(status_code=404, detail="No data found for the given date range")
