@@ -40,7 +40,7 @@ def get_data(ticker :str, start_date:str = None, end_date:str = None,period :str
         data = yf.download(ticker, period=period, interval= timeframe, multi_level_index=False)[["Open", "High", "Low", "Close"]]
     elif timeframe:
         if timeframe.endswith("m"):
-            data = yf.download(ticker, period="3mo", interval= timeframe, multi_level_index=False)[["Open", "High", "Low", "Close"]]
+            data = yf.download(ticker, period="1d", interval= timeframe, multi_level_index=False)[["Open", "High", "Low", "Close"]]
         elif timeframe.endswith("h"):
             data = yf.download(ticker, period="1mo", interval= timeframe, multi_level_index=False)[["Open", "High", "Low", "Close"]]
         else : 
@@ -81,7 +81,7 @@ def read_ticker_list() :
     
     return data
 
-read_ticker_list()
+#read_ticker_list()
 
 def read_category():
     with sqlite3.connect('asset_prices.db') as conn :
@@ -209,14 +209,14 @@ def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, period:
             data.drop_duplicates(inplace=True)
             critical_columns = ['ticker', 'date', 'open', 'high', 'low', 'close', 'category', 'timeframe']
             data.dropna(subset=critical_columns, inplace=True)
-            print(data)
+            print(data.head(3))
             return data
             
     except Exception as e:
         raise ValueError(f"Error reading database: {e}")
 
 
-#read_db_v2("eth-usd", start_date=None, end_date=None, timeframe="4h")
+read_db_v2("nvda", timeframe="15m")
 
 
 
