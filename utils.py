@@ -20,6 +20,7 @@ def create_db():
             close REAL NOT NULL,
             change FLOAT ,
             category TEXT NOT NULL,
+            period TEXT ,
             timeframe TEXT NOT NULL,
             PRIMARY KEY (ticker, date, timeframe)
             )''')
@@ -32,21 +33,36 @@ def create_db():
     return
 
 
-def get_data(ticker :str, start_date:str, end_date:str, timeframe :str) -> pd.DataFrame:
-    data = yf.download(ticker, start=start_date, end=end_date, interval= timeframe, multi_level_index=False)[["Open", "High", "Low", "Close"]]
-    data.reset_index(inplace=True)
- 
+def get_data(ticker :str, start_date:str = None, end_date:str = None,period :str = None,  timeframe : str = "1d") -> pd.DataFrame:
+    if start_date and end_date:
+        data = yf.download(ticker, start=start_date, end=end_date, threads=True, period=period, interval= timeframe, multi_level_index=False)[["Open", "High", "Low", "Close"]]
+        data.reset_index(inplace=True)
+    if period:
+        data = yf.download(ticker, period=period, interval= timeframe, multi_level_index=False)[["Open", "High", "Low", "Close"]]
+        data.reset_index(inplace=True)
+    if timeframe  and start_date is None and end_date is None:
+        if timeframe.endswith("mo"):
+            data = yf.download(ticker, period="3mo", interval= timeframe, multi_level_index=False)[["Open", "High", "Low", "Close"]]
+            data.reset_index(inplace=True)
+        else :
+            data = yf.download(ticker, period="1mo", interval= timeframe, multi_level_index=False)[["Open", "High", "Low", "Close"]]
+            data.reset_index(inplace=True)
+        
     data.columns=data.columns.str.lower()    
     if 'datetime' in data.columns:
         data.rename(columns={"datetime": "date"}, inplace=True)
        
     data["ticker"] = ticker
     data["timeframe"] = timeframe
+    data["period"]  = period
     data["change"]= data["close"].pct_change()
-    data["category"] = "crypto" if ticker.endswith(("-usd", "-USD")) else "stock"
-
-
-
+    if ticker.endswith(("-usd", "-USD")):
+        data["category"] = "crypto"
+    elif ticker.endswith(("=X", "=x")):
+        data["category"] = "currency"
+    else:
+        data["category"] = "stock"
+   
     return data
 
 
@@ -63,21 +79,20 @@ def read_ticker_list() :
             )
         """, conn)
         data.dropna(inplace=True)   
-        
-        print(data.head())
+    
     return data
 
-read_ticker_list()
+#read_ticker_list()
 
 def read_category():
     with sqlite3.connect('asset_prices.db') as conn :
         data=pd.read_sql_query("SELECT  category FROM asset_prices GROUP by category", conn)
         data .dropna(inplace=True)
-        print(data.head())
+       
     return data
 
 
-read_category()
+#read_category()
 
 def read_db(ticker:str, start_date: str = None , end_date: str = None, timeframe  : str = "1d") -> pd.DataFrame:
     ticker = ticker.upper()
@@ -130,7 +145,7 @@ def read_db(ticker:str, start_date: str = None , end_date: str = None, timeframe
 
 #read_db("eth-usd", timeframe="1d")
 
-def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, timeframe: str = "1d") -> pd.DataFrame:
+def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, period: str = None, timeframe: str = "1d") -> pd.DataFrame:
     ticker = ticker.upper()
     today = datetime.now().strftime("%Y-%m-%d")
     create_db()
@@ -143,8 +158,12 @@ def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, timefra
             result = cursor.fetchone()
             max_date = result[0] if result and result[0] else None  
             
-            if not max_date:
-                updated_data = get_data(ticker, start_date="2008-01-01", end_date=today, timeframe=timeframe)
+            if not max_date and timeframe != "1d":
+                updated_data =get_data(ticker ,timeframe=timeframe)
+                updated_data.to_sql("asset_prices", conn, if_exists="append", index=False)
+                
+            elif not max_date :
+                updated_data =get_data(ticker ,start_date="2008-01-01", end_date=today,timeframe=timeframe)
                 updated_data.to_sql("asset_prices", conn, if_exists="append", index=False)
                 
             else:
@@ -154,11 +173,22 @@ def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, timefra
                     updated_data['date'] = updated_data['date'].astype(str)
                     cursor.executemany(
                         """INSERT OR IGNORE INTO asset_prices 
-                           (ticker, date, open, high, low, close, change, category, timeframe) 
+                           (ticker, date, open, high, low, close, change,period,  category, timeframe) 
                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                         updated_data.values.tolist()
                     )
                     conn.commit()
+            if period : 
+                updated_data = get_data(ticker, start_date=None, end_date=None, period=period, timeframe=timeframe)
+                updated_data['date'] = updated_data['date'].astype(str)
+                cursor.executemany(
+                        """INSERT OR IGNORE INTO asset_prices 
+                           (ticker, date, open, high, low, close, change, period,category, timeframe) 
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        updated_data.values.tolist()
+                    )
+                conn.commit()
+                    
                 
              
             if start_date and end_date:
@@ -179,7 +209,7 @@ def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, timefra
         raise ValueError(f"Error reading database: {e}")
 
 
-#read_db_v2("nvda", start_date="2023-01-01", end_date="2023-01-20", timeframe="1d")
+read_db_v2("eth-usd", timeframe="30m")
 
 
 
