@@ -81,11 +81,11 @@ def read_ticker_list() :
                 GROUP BY ticker
             )
         """, conn)
-        data.dropna(inplace=True)   
+    data.dropna(inplace=True)   
     
     return data
 
-#read_ticker_list()
+read_ticker_list()
 
 def read_category():
     with sqlite3.connect('asset_prices.db') as conn :
@@ -206,13 +206,14 @@ def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, period:
             data = pd.DataFrame(data, columns=[desc[0] for desc in cursor.description])
             data.drop_duplicates(inplace=True)
             data.dropna(inplace=True)
+            print(data)
             return data
             
     except Exception as e:
         raise ValueError(f"Error reading database: {e}")
 
 
-#read_db_v2("eth-usd", timeframe="30m")
+#read_db_v2("eth-usd", timeframe="1d")
 
 
 
