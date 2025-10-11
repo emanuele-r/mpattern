@@ -13,7 +13,7 @@ def create_db():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS asset_prices (
             ticker TEXT NOT NULL,
-            date TEXT ISO8601 NOT NULL,
+            date TEXT ISO8601 ,
             open REAL NOT NULL,
             high REAL NOT NULL,
             low REAL NOT NULL,
@@ -363,6 +363,16 @@ def array_with_shift(array, array2, dates, shift_range: int = 0, k: int = 3, met
     best_dates = [extended_dates[start:start+m] for start in best_starts]
 
     return best_indices, best_dates, best_subarrays, best_distances, array, array2
+
+
+
+
+
+
+
+
+
+
 
 
 
