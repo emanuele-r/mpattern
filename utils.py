@@ -176,7 +176,7 @@ def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, period:
                     updated_data['date'] = updated_data['date'].astype(str)
                     cursor.executemany(
                         """INSERT OR IGNORE INTO asset_prices 
-                           (ticker, date, open, high, low, close, change,period,  category, timeframe) 
+                           (ticker, date, open, high, low, close, change,category,  period, timeframe) 
                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                         updated_data.values.tolist()
                     )
@@ -186,7 +186,7 @@ def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, period:
                 updated_data['date'] = updated_data['date'].astype(str)
                 cursor.executemany(
                         """INSERT OR IGNORE INTO asset_prices 
-                           (ticker, date, open, high, low, close, change, period,category, timeframe) 
+                           (ticker, date, open, high, low, close, change, category,period, timeframe) 
                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                         updated_data.values.tolist()
                     )
