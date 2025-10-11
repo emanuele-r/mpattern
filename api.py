@@ -127,29 +127,7 @@ def read_data(
         raise HTTPException(status_code=500, detail=str(e))
     
     
-@app.post("/chartData")
-def get_chartData(
-    timeFrame : str = Query(..., description="Time frame"),
-    symbol :str =Query(..., description="Ticker symbol"),
-    ) :
-    ticker = ticker.upper()
-    try : 
-        data=read_db_v2(symbol,  timeFrame)
 
-        chartData =  []
-        for row in data.index:
-            data_row = data.loc[row]  
-            chartData.append({
-        "timeframe": timeFrame ,
-        "date": str(data_row["date"]),
-        "close": float(data_row["close"])
-        })
-        
-        return chartData
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    
-    
 
 @app.post("/get_ohlc")
 def get_ohlc_endpoint(
