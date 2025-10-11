@@ -133,22 +133,35 @@ def read_data(
 def get_ohlc_endpoint(
     ticker: str = Query(..., description="Ticker symbol"),
     start_date : str = Query(default=None, description="Start date interval (Optional)"),
-    end_date : str= Query(default=None, description="End date interval(Optional)")):
-
+    end_date : str= Query(default=None, description="End date interval(Optional)"),
+    timeframe: str = Query(default="1d", description="Timeframe (Optional)"),
+    ):
+    """
+    Get OHLC (Open, High, Low, Close) data for a ticker.
+    
+    Example: POST /get_ohlc?ticker=btc-usd&start_date=2024-01-01&end_date=2024-12-31&timeframe=1d
+    """
+   
+   
     try:
-        data = read_db_v2(ticker, start_date, end_date)
+        data = read_db_v2(ticker, start_date, end_date , timeframe)
+        if data.empty:
+            raise HTTPException(status_code=404, detail=f"No data found for {ticker}")
             
-        datas = [
+        ohlc_data = [
             {
                 "date": str(data["date"][row]),
                 "open": float(data["open"][row]),
                 "high": float(data["high"][row]),
                 "low": float(data["low"][row]),
                 "close": float(data["close"][row]),
+                "timeframe": str(data["timeframe"][row]),
             }
             for row in data.index
         ]
-        return datas
+        return ohlc_data
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

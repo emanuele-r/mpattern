@@ -196,9 +196,12 @@ def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, period:
             if start_date and end_date:
                 cursor.execute("SELECT * FROM asset_prices WHERE ticker = ? AND timeframe = ? AND date BETWEEN ? AND ?",
                               (ticker, timeframe, start_date, end_date))
-            else:
+            elif ticker and timeframe:
                 cursor.execute("SELECT * FROM asset_prices WHERE ticker = ? AND timeframe = ?",
                               (ticker, timeframe))
+            else:
+                cursor.execute("SELECT * FROM asset_prices")
+            
            
             
             data = cursor.fetchall()
