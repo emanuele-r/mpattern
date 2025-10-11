@@ -216,7 +216,7 @@ def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, period:
         raise ValueError(f"Error reading database: {e}")
 
 
-read_db_v2("eth-usd", start_date=None, end_date=None, timeframe="4h")
+#read_db_v2("eth-usd", start_date=None, end_date=None, timeframe="4h")
 
 
 
