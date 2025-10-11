@@ -41,11 +41,14 @@ def get_data(ticker :str, start_date:str = None, end_date:str = None,period :str
         data = yf.download(ticker, period=period, interval= timeframe, multi_level_index=False)[["Open", "High", "Low", "Close"]]
         data.reset_index(inplace=True)
     if timeframe  and start_date is None and end_date is None:
-        if timeframe.endswith("mo"):
+        if timeframe.endswith("m"):
             data = yf.download(ticker, period="3mo", interval= timeframe, multi_level_index=False)[["Open", "High", "Low", "Close"]]
             data.reset_index(inplace=True)
-        else :
+        elif timeframe.endswith("h"):
             data = yf.download(ticker, period="1mo", interval= timeframe, multi_level_index=False)[["Open", "High", "Low", "Close"]]
+            data.reset_index(inplace=True)
+        else : 
+            data = yf.download(ticker, period="max", interval= timeframe, multi_level_index=False)[["Open", "High", "Low", "Close"]]
             data.reset_index(inplace=True)
         
     data.columns=data.columns.str.lower()    
