@@ -36,11 +36,9 @@ def create_db():
 def get_data(ticker :str, start_date:str = None, end_date:str = None,period :str = None,  timeframe : str = "1d") -> pd.DataFrame:
     if start_date and end_date:
         data = yf.download(ticker, start=start_date, end=end_date, threads=True, period=period, interval= timeframe, multi_level_index=False)[["Open", "High", "Low", "Close"]]
-        data.reset_index(inplace=True)
-    if period:
+    elif period:
         data = yf.download(ticker, period=period, interval= timeframe, multi_level_index=False)[["Open", "High", "Low", "Close"]]
-        data.reset_index(inplace=True)
-    if timeframe  and start_date is None and end_date is None:
+    elif timeframe:
         if timeframe.endswith("m"):
             data = yf.download(ticker, period="3mo", interval= timeframe, multi_level_index=False)[["Open", "High", "Low", "Close"]]
             data.reset_index(inplace=True)
@@ -176,7 +174,7 @@ def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, period:
                     updated_data['date'] = updated_data['date'].astype(str)
                     cursor.executemany(
                         """INSERT OR IGNORE INTO asset_prices 
-                           (ticker, date, open, high, low, close, change,category,  period, timeframe) 
+                           (ticker, date, open, high, low, close, change,period,  category, timeframe) 
                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                         updated_data.values.tolist()
                     )
@@ -186,7 +184,7 @@ def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, period:
                 updated_data['date'] = updated_data['date'].astype(str)
                 cursor.executemany(
                         """INSERT OR IGNORE INTO asset_prices 
-                           (ticker, date, open, high, low, close, change, category,period, timeframe) 
+                           (ticker, date, open, high, low, close, change, period,category, timeframe) 
                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                         updated_data.values.tolist()
                     )

@@ -194,7 +194,7 @@ def get_patterns(
     ticker: str = Query(..., description="Ticker symbol"), 
     start_date: str = Query(...),
     end_date: str = Query(...),
-    k: int = Query(3, description="Number of top motifs to return"),
+    k: int = Query(3, description="Number of pattern to return"),
     metric: str = Query("l2", description="Distance metric: 'l1' or 'l2'"),
     wrap: bool = Query(True, description="Allow wrapping (circular search)"),
 ):
@@ -203,9 +203,9 @@ def get_patterns(
 
     try:
         
-        data = read_db(ticker)
+        data = read_db_v2(ticker, start_date, end_date)
         
-        query = data.loc[(data["date"] >= start_date) & (data["date"] <= end_date), "close"].values
+        query = data
         array2 = data["close"].values
         dates = data["date"].values
 
