@@ -113,20 +113,20 @@ def deleteFromFavourites(ticker: str = Query(..., description="Ticker symbol")):
 def get_tickers():
    
     try:
-        data = read_newtickerlist()  
+        data = read_ticker_list()  
         categoryTypes = []
         for row in data.index:
-            category= data["category"][row]
+            id= data["id"][row]
             ticker =data["ticker"][row]
-            categoryTypes.append({"category": category, "ticker": ticker})
+            categoryTypes.append({"category": id, "ticker": ticker})
         
         tickers = []
         for row in data.index :
-            category = data["category"][row]
+            id = data["id"][row]
             symbol = data["ticker"][row]
             price = data["close"][row]
             change = data["change"][row]
-            tickers.append({"category": category, "symbol": symbol, "price": price, "change": change})
+            tickers.append({"category": id, "symbol": symbol, "price": price, "change": change})
         
         prices = {"categoryTypes" : categoryTypes ,  "tickers" : tickers}
        

@@ -38,6 +38,15 @@ def create_db():
             close FLOAT NOT NULL,
             PRIMARY KEY (ticker)
             )''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS category(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            category TEXT NOT NULL
+            )''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS  tickers(
+            id NOT NULL,
+            ticker TEXT NOT NULL,
+            PRIMARY KEY (ticker)
+    )''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS idx_ticker_date 
                          ON asset_prices(ticker, date)''')
     
@@ -46,14 +55,39 @@ def create_db():
     conn.close()
     return
 
+create_db()
 
-def updateTickerListdata(ticker: str, category:str, change:float , close:float):
-    ticker = ticker.upper()
+
+
+def insertIntoCategory(category :str):
+    with sqlite3.connect("asset_prices.db") as conn:    
+        cursor = conn.cursor()
+        cursor.execute("INSERT OR IGNORE INTO category (category) VALUES (?)", (category, ))
+        conn.commit()
+    return
+
+
+
+
+
+def readTickerList(ticker: str):
     with sqlite3.connect("asset_prices.db") as conn:
         cursor = conn.cursor()
-        cursor.execute('UPDATE ticker_list SET category = ?, change = ?, close = ? WHERE ticker = ?', (category, change, close, ticker))
-        data=cursor.fetchall()    
+        cursor.execute('''
+            SELECT a.ticker, a.category, a.change, a.close, c.id
+            FROM asset_prices AS a
+            INNER JOIN category AS c
+            ON a.category = c.category
+            WHERE a.ticker = ?
+            GROUP BY c.id
+        ''', (ticker,))
+        data = cursor.fetchall()
+        print(data)
     return data
+
+
+
+
 
 
 def insertDataIntoTickerList(ticker :str ):
@@ -69,12 +103,8 @@ def insertDataIntoTickerList(ticker :str ):
     return data
 
 
-def read_newtickerlist():
-    with sqlite3.connect('asset_prices.db') as conn :
-        data=pd.read_sql_query("SELECT * FROM ticker_list", conn)
-    data .dropna(inplace=True)
-    print(data)
-    return data
+
+
 
 
 
@@ -157,8 +187,6 @@ def read_ticker_list() :
 
 
 
-def read_db(ticker:str, start_date: str = None , end_date: str = None, timeframe  : str = "1d") -> pd.DataFrame:
-    ticker = ticker.upper()
     today=datetime.now().strftime("%Y-%m-%d")
     create_db()
     try :
@@ -273,14 +301,13 @@ def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, period:
             data.drop_duplicates(inplace=True)
             critical_columns = ['ticker', 'date', 'open', 'high', 'low', 'close', 'category', 'timeframe']
             data.dropna(subset=critical_columns, inplace=True)
-            print(data.head(3))
             return data
             
     except Exception as e:
         raise ValueError(f"Error reading database: {e}")
 
 
-#read_db_v2("nvda", timeframe="15m")
+#read_db_v2("eurusd=x", timeframe="1m")
 
 
 
