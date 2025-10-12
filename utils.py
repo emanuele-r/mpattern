@@ -56,11 +56,15 @@ def updateTickerListdata(ticker: str, category:str, change:float , close:float):
     return data
 
 
-def insertDataIntoTickerList(ticker :str , category :str , change :float, close:float):
+def insertDataIntoTickerList(ticker :str ):
     ticker = ticker.upper()
     with sqlite3.connect("asset_prices.db") as conn:
         cursor = conn.cursor()
-        cursor.execute('INSERT OR IGNORE INTO ticker_list (ticker, category, change, close) VALUES (?, ?, ?, ?)', (ticker, category, change, close))
+        cursor.execute('''
+                       INSERT OR IGNORE INTO ticker_list (ticker, category, change, close) 
+                       SELECT ticker, category, change, close 
+                       FROM asset_prices
+                       WHERE ticker = ?, ''', (ticker, ))
         data=cursor.fetchall()    
     return data
 
@@ -151,17 +155,7 @@ def read_ticker_list() :
     
     return data
 
-read_ticker_list()
 
-def read_category():
-    with sqlite3.connect('asset_prices.db') as conn :
-        data=pd.read_sql_query("SELECT  category FROM asset_prices GROUP by category", conn)
-        data .dropna(inplace=True)
-       
-    return data
-
-
-#read_category()
 
 def read_db(ticker:str, start_date: str = None , end_date: str = None, timeframe  : str = "1d") -> pd.DataFrame:
     ticker = ticker.upper()

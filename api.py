@@ -113,7 +113,7 @@ def deleteFromFavourites(ticker: str = Query(..., description="Ticker symbol")):
 def get_tickers():
    
     try:
-        data = read_ticker_list()  
+        data = read_newtickerlist()  
         categoryTypes = []
         for row in data.index:
             category= data["category"][row]
@@ -130,7 +130,6 @@ def get_tickers():
         
         prices = {"categoryTypes" : categoryTypes ,  "tickers" : tickers}
        
-        print(prices)
         return prices
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
