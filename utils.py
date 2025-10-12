@@ -104,10 +104,6 @@ def insertDataIntoTickerList(ticker :str ):
 
 
 
-
-
-
-
 def deleteDataFromFavourites(ticker :str):
     ticker = ticker.upper()
     with sqlite3.connect("asset_prices.db") as conn:    
@@ -143,11 +139,11 @@ def get_data(ticker :str, start_date:str = None, end_date:str = None,period :str
         data = yf.download(ticker, start=start_date, end=end_date, threads=True, period=period, interval= timeframe, multi_level_index=False)[["Open", "High", "Low", "Close"]]
     elif timeframe:
         if timeframe.endswith("m"):
-            data = yf.download(ticker, period="1d", interval= timeframe, multi_level_index=False)[["Open", "High", "Low", "Close"]]
+            data = yf.download(ticker, period="1d", interval= timeframe, threads=True, multi_level_index=False)[["Open", "High", "Low", "Close"]]
         elif timeframe.endswith("h"):
-            data = yf.download(ticker, period="1mo", interval= timeframe, multi_level_index=False)[["Open", "High", "Low", "Close"]]
+            data = yf.download(ticker, period="1mo", interval= timeframe, threads=True, multi_level_index=False)[["Open", "High", "Low", "Close"]]
         else : 
-            data = yf.download(ticker, period="max", interval= timeframe, multi_level_index=False)[["Open", "High", "Low", "Close"]]
+            data = yf.download(ticker, period="max", interval= timeframe, threads=True, multi_level_index=False)[["Open", "High", "Low", "Close"]]
         
     data.reset_index(inplace=True)
     data.columns=data.columns.str.lower()    
@@ -168,73 +164,8 @@ def get_data(ticker :str, start_date:str = None, end_date:str = None,period :str
     return data
 
 
-   
-   
-def read_ticker_list() :
-    with sqlite3.connect('asset_prices.db') as conn :
-        data = pd.read_sql_query("""
-            SELECT category, ticker, close, change 
-            FROM asset_prices 
-            WHERE rowid IN (
-                SELECT MAX(rowid) 
-                FROM asset_prices 
-                GROUP BY ticker
-            )
-        """, conn)
-    data.dropna(inplace=True)   
-    
-    return data
 
-
-
-    today=datetime.now().strftime("%Y-%m-%d")
-    create_db()
-    try :
-        with sqlite3.connect('asset_prices.db') as conn :
-            cursor = conn.cursor()
-            
-            query = cursor.execute("SELECT MAX(date) FROM asset_prices WHERE ticker = ? AND timeframe = ?", (ticker,timeframe))
-            data=cursor.fetchall()
-            if not data:
-                get_data(ticker, start_date="2008-01-01", end_date=today, timeframe=timeframe)
-                query = cursor.execute("SELECT * FROM asset_prices WHERE ticker = ?", (ticker,))
-                data = cursor.fetchall()
-                
-            else:
-                if start_date and end_date:
-                    if data[-1][1][:10] != today:
-                        get_data(ticker, start_date=data[-1][1][:10], end_date=today, timeframe=timeframe)
-                        query = cursor.execute("SELECT * FROM asset_prices WHERE ticker = ?", (ticker,))
-                        data = cursor.fetchall()
-                    elif timeframe != data[-1][7]:
-                        get_data(ticker, start_date=data[-1][1][:10], end_date=today, timeframe=timeframe)
-                        query = cursor.execute("SELECT * FROM asset_prices WHERE ticker = ?", (ticker,))
-                        data = cursor.fetchall()
-                    else:
-                        query = cursor.execute("SELECT * FROM asset_prices WHERE ticker = ? AND date BETWEEN ? AND ?", (ticker, start_date, end_date))
-                        data = cursor.fetchall()
-                else:
-                    if data[-1][1][:10] != today:
-                        get_data(ticker, start_date=data[-1][1][:10], end_date=today, timeframe=timeframe)
-                        query = cursor.execute("SELECT * FROM asset_prices WHERE ticker = ?", (ticker,))
-                        data = cursor.fetchall()
-                    elif timeframe != data[-1][7]:
-                        get_data(ticker, start_date=data[-1][1][:10], end_date=today, timeframe=timeframe)
-                        query = cursor.execute("SELECT * FROM asset_prices WHERE ticker = ?", (ticker,))
-                        data = cursor.fetchall()
-                    else:
-                        query = cursor.execute("SELECT * FROM asset_prices WHERE ticker = ?", (ticker,))
-                        data = cursor.fetchall()
-            
-            data = pd.DataFrame(data, columns=[desc[0] for desc in cursor.description])
-            data.drop_duplicates(inplace=True)
-            data.dropna(inplace=True)
-             
-        return data
-    except Exception as e:
-        raise ValueError(f"Error reading database: {e}") 
-
-#read_db("eth-usd", timeframe="1d")
+                        
 
 def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, period: str = None, timeframe: str = "1d") -> pd.DataFrame:
     ticker = ticker.upper()

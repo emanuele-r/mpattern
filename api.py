@@ -113,7 +113,7 @@ def deleteFromFavourites(ticker: str = Query(..., description="Ticker symbol")):
 def get_tickers():
    
     try:
-        data = read_ticker_list()  
+        data = readTickerList()  
         categoryTypes = []
         for row in data.index:
             id= data["id"][row]
