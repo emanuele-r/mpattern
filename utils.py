@@ -180,7 +180,7 @@ def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, period:
             
             if not max_date and timeframe != "1d":
                 updated_data =get_data(ticker ,timeframe=timeframe)
-                if not updated_data.empty:
+                if not updated_data.empty:  
                     updated_data.to_sql("asset_prices", conn, if_exists="append", index=False)
                 
             elif not max_date :

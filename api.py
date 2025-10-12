@@ -115,20 +115,18 @@ def get_tickers():
     try:
         data = readTickerList()  
         categoryTypes = []
-        for row in data:
-            id, ticker, category , price, change= row
-            categoryTypes.append({"category":f"{id}-{category}" , "ticker": ticker})
-        
         tickers = []
-        for row in data :
-            id, symbol, category, price, change = row
-            tickers.append({"category": f"{id } - { category}", "symbol": symbol, "price": price, "change": change})
-        
-        prices = {"categoryTypes" : categoryTypes ,  "tickers" : tickers}
-        
+        for row in data:
+            ticker, category, change, price, id = row  
+
+            categoryTypes.append({"category": f"{id}-{category}", "ticker": ticker})
+            tickers.append({"category": f"{id}-{category}", "symbol": ticker, "price": price, "change": change})
+
+        prices = {"categoryTypes": categoryTypes, "tickers": tickers}
         print(prices)
-       
         return prices
+        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
