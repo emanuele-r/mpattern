@@ -115,27 +115,25 @@ def get_tickers():
     try:
         data = readTickerList()  
         categoryTypes = []
-        for row in data.index:
-            id= data["id"][row]
-            ticker =data["ticker"][row]
-            categoryTypes.append({"category": id, "ticker": ticker})
+        for row in data:
+            id, ticker, category , price, change= row
+            categoryTypes.append({"category":f"{id}-{category}" , "ticker": ticker})
         
         tickers = []
-        for row in data.index :
-            id = data["id"][row]
-            symbol = data["ticker"][row]
-            price = data["close"][row]
-            change = data["change"][row]
-            tickers.append({"category": id, "symbol": symbol, "price": price, "change": change})
+        for row in data :
+            id, symbol, category, price, change = row
+            tickers.append({"category": f"{id } - { category}", "symbol": symbol, "price": price, "change": change})
         
         prices = {"categoryTypes" : categoryTypes ,  "tickers" : tickers}
+        
+        print(prices)
        
         return prices
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-
+get_tickers()
 
 @app.post("/historical_prices")
 def read_data(
