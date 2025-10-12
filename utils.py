@@ -70,7 +70,7 @@ def insertIntoCategory(category :str):
 
 
 
-def readTickerList(ticker: str):
+def readTickerList():
     with sqlite3.connect("asset_prices.db") as conn:
         cursor = conn.cursor()
         cursor.execute('''
@@ -78,13 +78,11 @@ def readTickerList(ticker: str):
             FROM asset_prices AS a
             INNER JOIN category AS c
             ON a.category = c.category
-            WHERE a.ticker = ?
             GROUP BY c.id
-        ''', (ticker,))
+        ''')
         data = cursor.fetchall()
         print(data)
     return data
-
 
 
 
