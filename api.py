@@ -70,6 +70,44 @@ async def preflight_handler(request: Request, rest_of_path: str = ""):
 def health_check():
     return {"status": "ok, faggot"}
 
+@app.get("/get_favorites")
+def get_favorites_ticker():
+    try :
+        data= readFavorites()
+        
+        
+        categoryTypes = []
+        tickers = []
+
+        for row in data:
+            ticker, category, change , close= row
+            categoryTypes.append({"category": category, "ticker": ticker, "change": change , "close": close})
+            tickers.append({"category": category, "symbol": ticker, "change": change, "close": close})
+
+            
+        
+        favourites = {"categoryTypes" : categoryTypes ,  "tickers" : tickers}
+        
+            
+        
+        return favourites
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/update_favorites")
+def addToFavourites(ticker: str = Query(..., description="Ticker symbol")):
+    try:
+        insertDataIntoFavourites(ticker)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post('/delete_favorites')
+def deleteFromFavourites(ticker: str = Query(..., description="Ticker symbol")):
+    try:
+        deleteDataFromFavourites(ticker)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/get_ticker_list")
 def get_tickers():
@@ -92,10 +130,12 @@ def get_tickers():
         
         prices = {"categoryTypes" : categoryTypes ,  "tickers" : tickers}
        
-        
+        print(prices)
         return prices
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
 
 
 @app.post("/historical_prices")

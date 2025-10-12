@@ -24,20 +24,89 @@ def create_db():
             timeframe TEXT NOT NULL,
             PRIMARY KEY (ticker, date, timeframe)
             )''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS ticker_list (
+            ticker TEXT NOT NULL,
+            category TEXT NOT NULL,
+            change FLOAT NOT NULL,
+            close FLOAT NOT NULL,
+            PRIMARY KEY (ticker)
+            )''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS favourites(
+            ticker TEXT NOT NULL,
+            category TEXT NOT NULL,
+            change FLOAT NOT NULL,
+            close FLOAT NOT NULL,
+            PRIMARY KEY (ticker)
+            )''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS idx_ticker_date 
                          ON asset_prices(ticker, date)''')
     
-    
+    cursor.execute("PRAGMA foreign_keys = ON")
     conn.commit()
     conn.close()
     return
 
 
+def updateTickerListdata(ticker: str, category:str, change:float , close:float):
+    ticker = ticker.upper()
+    with sqlite3.connect("asset_prices.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute('UPDATE ticker_list SET category = ?, change = ?, close = ? WHERE ticker = ?', (category, change, close, ticker))
+        data=cursor.fetchall()    
+    return data
+
+
+def insertDataIntoTickerList(ticker :str , category :str , change :float, close:float):
+    ticker = ticker.upper()
+    with sqlite3.connect("asset_prices.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute('INSERT OR IGNORE INTO ticker_list (ticker, category, change, close) VALUES (?, ?, ?, ?)', (ticker, category, change, close))
+        data=cursor.fetchall()    
+    return data
+
+
+def read_newtickerlist():
+    with sqlite3.connect('asset_prices.db') as conn :
+        data=pd.read_sql_query("SELECT * FROM ticker_list", conn)
+    data .dropna(inplace=True)
+    print(data)
+    return data
+
+
+
+def deleteDataFromFavourites(ticker :str):
+    ticker = ticker.upper()
+    with sqlite3.connect("asset_prices.db") as conn:    
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM favourites WHERE ticker = ?", (ticker, ))
+        conn.commit()
+    return
+
+
+def insertDataIntoFavourites(ticker :str):
+    ticker = ticker.upper()
+    with sqlite3.connect("asset_prices.db") as conn:    
+        cursor = conn.cursor()
+        cursor.execute('''INSERT OR IGNORE INTO favourites (ticker, category, change, close)
+                       SELECT ticker, category, change, close 
+                       FROM asset_prices
+                       WHERE ticker = ?''', (ticker, ))
+        conn.commit()
+    return
+
+
+def readFavorites():
+    with sqlite3.connect("asset_prices.db") as conn :
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM favourites")
+        data = cursor.fetchall()
+    return data
+
+
+
 def get_data(ticker :str, start_date:str = None, end_date:str = None,period :str = None,  timeframe : str = "1d") -> pd.DataFrame:
     if start_date and end_date:
         data = yf.download(ticker, start=start_date, end=end_date, threads=True, period=period, interval= timeframe, multi_level_index=False)[["Open", "High", "Low", "Close"]]
-    elif period:
-        data = yf.download(ticker, period=period, interval= timeframe, multi_level_index=False)[["Open", "High", "Low", "Close"]]
     elif timeframe:
         if timeframe.endswith("m"):
             data = yf.download(ticker, period="1d", interval= timeframe, multi_level_index=False)[["Open", "High", "Low", "Close"]]
@@ -66,6 +135,7 @@ def get_data(ticker :str, start_date:str = None, end_date:str = None,period :str
 
 
    
+   
 def read_ticker_list() :
     with sqlite3.connect('asset_prices.db') as conn :
         data = pd.read_sql_query("""
@@ -81,7 +151,7 @@ def read_ticker_list() :
     
     return data
 
-#read_ticker_list()
+read_ticker_list()
 
 def read_category():
     with sqlite3.connect('asset_prices.db') as conn :
@@ -216,7 +286,7 @@ def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, period:
         raise ValueError(f"Error reading database: {e}")
 
 
-read_db_v2("nvda", timeframe="15m")
+#read_db_v2("nvda", timeframe="15m")
 
 
 
