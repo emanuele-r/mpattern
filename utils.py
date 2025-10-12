@@ -200,20 +200,8 @@ def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, period:
                         updated_data.values.tolist()
                         )
                         conn.commit()
-            if period : 
-                updated_data = get_data(ticker, start_date=None, end_date=None, period=period, timeframe=timeframe)
-                if not updated_data.empty:
-                    updated_data['date'] = updated_data['date'].astype(str)
-                    cursor.executemany(
-                        """INSERT OR IGNORE INTO asset_prices 
-                           (ticker, date, open, high, low, close, change, period,category, timeframe) 
-                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                        updated_data.values.tolist()
-                    )
-                    conn.commit()
-                    
-                
-             
+            
+            
             if start_date and end_date:
                 cursor.execute("SELECT * FROM asset_prices WHERE ticker = ? AND timeframe = ? AND date BETWEEN ? AND ?",
                               (ticker, timeframe, start_date, end_date))
@@ -230,13 +218,14 @@ def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, period:
             data.drop_duplicates(inplace=True)
             critical_columns = ['ticker', 'date', 'open', 'high', 'low', 'close', 'category', 'timeframe']
             data.dropna(subset=critical_columns, inplace=True)
+            print(data)
             return data
             
     except Exception as e:
         raise ValueError(f"Error reading database: {e}")
 
 
-#read_db_v2("eurusd=x", timeframe="1m")
+read_db_v2("eth-usd", timeframe="1m")
 
 
 

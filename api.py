@@ -131,7 +131,6 @@ def get_tickers():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-get_tickers()
 
 @app.post("/historical_prices")
 def read_data(
@@ -145,7 +144,7 @@ def read_data(
     """
     ticker = ticker.upper()
     try : 
-        data=read_db_v2(ticker, start_date, end_date, timeframe)
+        data=read_db_v2(ticker=ticker, start_date=start_date, end_date=end_date, timeframe=timeframe)
 
         chartData =  []
         for row in data.index:
@@ -162,7 +161,6 @@ def read_data(
         raise HTTPException(status_code=500, detail=str(e))
     
     
-
 
 @app.post("/get_ohlc")
 def get_ohlc_endpoint(
