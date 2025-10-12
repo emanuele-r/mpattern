@@ -167,7 +167,7 @@ def get_data(ticker :str, start_date:str = None, end_date:str = None,period :str
 
 def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, period: str = None, timeframe: str = "1d") -> pd.DataFrame:
     ticker = ticker.upper()
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = datetime.now().strftime("%Y-%m-%d %H:%M:%S ") if timeframe != "1d" else datetime.now().strftime("%Y-%m-%d")
     create_db()
     
     try:
@@ -185,14 +185,21 @@ def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, period:
                 
             elif not max_date :
                 updated_data =get_data(ticker ,start_date="2008-01-01", end_date=today,timeframe=timeframe)
-                updated_data.to_sql("asset_prices", conn, if_exists="append", index=False)
+                if not updated_data.empty:
+                    updated_data.to_sql("asset_prices", conn, if_exists="append", index=False)
                 
             else:
-                last_date = max_date[:10]  
+                if timeframe == "1d":
+                    last_date = max_date.split()[0] if ' ' in max_date else max_date[:10]  
+                else:
+                    last_date = max_date
                 if last_date != today:
                     updated_data = get_data(ticker, start_date=last_date, end_date=today, timeframe=timeframe)
                     if not updated_data.empty:
-                        updated_data['date'] = updated_data['date'].astype(str)
+                        if timeframe == "1d":
+                            updated_data['date'] = pd.to_datetime(updated_data['date']).dt.strftime('%Y-%m-%d')
+                        else:
+                            updated_data['date'] = pd.to_datetime(updated_data['date']).dt.strftime('%Y-%m-%d %H:%M:%S')
                         cursor.executemany(
                         """INSERT OR IGNORE INTO asset_prices 
                            (ticker, date, open, high, low, close, change,period,  category, timeframe) 
@@ -222,10 +229,9 @@ def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, period:
             return data
             
     except Exception as e:
-        raise ValueError(f"Error reading database: {e}")
+        raise ValueError(f"Error reading database: {e}")    
 
 
-read_db_v2("eth-usd", timeframe="1m")
 
 
 
