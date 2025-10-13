@@ -225,14 +225,11 @@ def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, period:
             data.drop_duplicates(inplace=True)
             critical_columns = ['ticker', 'date', 'open', 'high', 'low', 'close', 'category', 'timeframe']
             data.dropna(subset=critical_columns, inplace=True)
-            print(data)
+            
             return data
             
     except Exception as e:
         raise ValueError(f"Error reading database: {e}")    
-
-
-
 
 
 
@@ -253,21 +250,6 @@ def calculate_query_return(ticker: str, start_date: str, end_date: str) -> float
 
 
 
-
-def to_float(x):
-    """Convert NumPy arrays or scalars safely to a Python float or list of floats."""
-    if x is None:
-        return None
-    if isinstance(x, (list, tuple)):
-        return [float(v) for v in x]
-    if isinstance(x, (np.ndarray, np.generic)):
-        if x.ndim == 0:
-            return float(x.item())             
-        elif x.ndim == 1:
-            return [float(v) for v in x]        
-        else:
-            return float(np.mean(x))            
-    return float(x)
 
 
 def optimize_calc(ticker: str , start_date: str,end_date: str) -> tuple:
