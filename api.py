@@ -199,6 +199,8 @@ def get_ohlc_endpoint(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+    
+
 
 
 @app.post("/get_mutiple_patterns", response_model=SubsequenceResponse)
@@ -239,17 +241,16 @@ def get_patterns(
         best_indices, best_dates, best_subarrays, best_distances, query, array2 = array_with_shift(
             query, array2, dates, k=k, metric=metric, wrap=wrap
         )
-
-        matches = [
-            SubsequenceMatch(
+        matches = []
+        for i, (dates_, values, dist) in enumerate(zip(best_dates, best_subarrays, best_distances)):
+            match = SubsequenceMatch(
                 dates=[str(d) for d in dates_],
                 closes=[float(v) for v in values],
-                similarity=to_float(dist),
-                query_return=to_float(query_return),
-                description= "btc on date"
+                similarity=float(dist),
+                query_return=float(query_return),
+                description=f"{ticker} pattern match {i + 1}"
             )
-            for dates_, values, dist in zip(best_dates, best_subarrays, best_distances)
-        ]
+            matches.append(match)
 
         return SubsequenceResponse(matches=matches)
 
