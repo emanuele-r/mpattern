@@ -235,7 +235,7 @@ def get_single_pattern(
 
 
 
-@app.post("/get_mutiple_patterns", response_model=SubsequenceResponse)
+@app.post("/get_mutiple_patterns")
 def get_patterns(
     ticker: str = Query(..., description="Ticker symbol"), 
     start_date: str = Query(...),
@@ -274,18 +274,16 @@ def get_patterns(
             query, array2, dates, k=k, metric=metric, wrap=wrap
         )
 
-        matches = [
-            SubsequenceMatch(
-                dates=[str(d) for d in dates_],
+        matches = []
+        for dates_, values, dist in zip(best_dates, best_subarrays, best_distances):
+            matches.append(dates=[str(d) for d in dates_],
                 closes=[float(v) for v in values],
                 similarity=to_float(dist),
                 query_return=to_float(query_return),
-                description= "btc on date"
-            )
-            for dates_, values, dist in zip(best_dates, best_subarrays, best_distances)
-        ]
-
-        return SubsequenceResponse(matches=matches)
+                description= "btc on date")
+        
+            
+        return matches
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Pattern search failed: {str(e)}")

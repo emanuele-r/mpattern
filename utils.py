@@ -411,6 +411,88 @@ def array_with_shift(array, array2, dates, shift_range: int = 0, k: int = 3, met
 
 
 
+def array_with_shift(array, array2, dates, shift_range: int = 0, k: int = 3, metric="l1", wrap=True):
+    
+    """
+    Vectorized motif search: find top-k matches of `array` inside `array2`.
+    
+    Parameters
+    ----------
+    array : array-like
+        The query array (length m).
+    array2 : array-like
+        The reference array (length n).
+    shift_range : int, optional
+        Maximum shift allowed between query and reference arrays.
+    k : int, optional
+        Best results to return.
+    metric : {"l1", "l2"}
+        Distance metric.
+    wrap : bool
+        Whether to allow wrapping (circular search).
+    """
+    array = np.asarray(array, dtype=float)
+    array2 = np.asarray(array2, dtype=float)
+
+    if len(array) == 0:
+        raise ValueError("Query array is empty")
+    if len(array2) == 0:
+        raise ValueError("Reference array is empty")
+    if len(array2) < len(array):
+        raise ValueError(f"Reference array (len={len(array2)}) is shorter than query array (len={len(array)})")
+    if len(dates) != len(array2):
+        raise ValueError(f"Dates array (len={len(dates)}) must match reference array (len={len(array2)})")
+
+    m = len(array)
+    n = len(array2)
+    
+    array_mean = np.mean(array)
+    array_std = np.std(array)
+    if array_std > 0:
+        array_normalized = (array - array_mean) / array_std
+    else:
+        array_normalized = array - array_mean
+
+    if wrap:
+        extended_prices = np.concatenate([array2, array2[:m-1]])
+        extended_dates = np.concatenate([dates, dates[:m-1]])
+        source_array = extended_prices
+    else:
+        extended_prices = array2
+        extended_dates = dates
+        source_array = array2
+    
+    subsequences = sliding_window_view(extended_prices, m)
+    
+    subseq_means = np.mean(subsequences, axis=1, keepdims=True)
+    subseq_stds = np.std(subsequences, axis=1, keepdims=True)
+    
+    subseq_stds = np.where(subseq_stds > 0, subseq_stds, 1.0)
+    subsequences_normalized = (subsequences - subseq_means) / subseq_stds
+    
+    if metric == "l1":
+        dists = np.sum(np.abs(subsequences_normalized - array_normalized), axis=1)
+    elif metric == "l2":
+        dists = np.sqrt(np.sum((subsequences_normalized - array_normalized) ** 2, axis=1))
+    else:
+        raise ValueError("metric must be 'l1' or 'l2'")
+    
+    k_actual = min(k, len(dists))
+    
+    if k_actual > 0:
+        best_idx = np.argpartition(dists, k_actual-1)[:k_actual]
+        best_idx = best_idx[np.argsort(dists[best_idx])]
+    else:
+        best_idx = np.array([], dtype=int)
+    
+    best_distances = dists[best_idx].tolist()
+    best_starts = best_idx.tolist()
+    best_indices = [list(range(start, start + m)) for start in best_starts]
+    best_subarrays = [source_array[start:start+m].tolist() for start in best_starts]
+    best_dates = [extended_dates[start:start+m].tolist() for start in best_starts]
+    
+    return best_indices, best_dates, best_subarrays, best_distances, array, array2
+
 def dynamic_time_warping(
     array,
     array2,
