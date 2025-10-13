@@ -276,16 +276,14 @@ def get_patterns(
 
         matches = []
         for dates_, values, dist in zip(best_dates, best_subarrays, best_distances):
-            matches.append(dates=[str(d) for d in dates_],
-                opens=[reference_data["open"][i] for i in best_indices],
-                highs=[reference_data["high"][i] for i in best_indices],
+            matches.append(   dates=[str(d) for d in dates_],
                 closes=[float(v) for v in values],
-                lows=[reference_data["low"][i] for i in best_indices],
                 similarity=to_float(dist),
                 query_return=to_float(query_return),
                 description= "btc on date")
         
-            
+                
+
         return matches
 
     except Exception as e:
