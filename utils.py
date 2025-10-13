@@ -252,62 +252,6 @@ def calculate_query_return(ticker: str, start_date: str, end_date: str) -> float
 
 
 
-def optimize_calc(ticker: str , start_date: str,end_date: str) -> tuple:
-
-    """
-
-    Find pattern into the time series
-
-    Usage:
-
-    start: start index of the time series
-
-    end: end index of the time series
-
-    """
-
-    'using sliding window instead of nested for loop'
-
-    start_time = time.time()
-    
-    data = read_db(ticker)
-    
-    data["date"] = pd.to_datetime(data["date"])  
-    
-    start_date = pd.to_datetime(start_date)
-    end_date = pd.to_datetime(end_date)
-
-    mask = (data["date"] >= start_date) & (data["date"] <= end_date)
-    array = data.loc[mask, "close"].values
-
-    array2 = data["close"].values
-
-
-    m = len(array)
-
-    n = len(array2)
-
-
-    subsequences = sliding_window_view(array2, m) 
-    distances = np.sum(np.abs(subsequences - array), axis=1)
-
-    best_start = np.argmin(distances)
-    best_distance = distances[best_start]
-    best_indices = list(range(best_start, best_start + m))
-    best_subarray = array2[best_start:best_start + m]
-
-    best_dates = data["date"].iloc[best_indices].tolist()
-
-    elapsed_time = time.time() - start_time
-    print(f"Elapsed time: {elapsed_time:.6f} seconds")
-
-    return best_indices, best_dates, best_subarray, array, array2, data , best_distance
-
-
-#optimize_calc("btc-usd", "2025-01-10", "2025-01-20")
-
-
-
 def array_with_shift(array, array2, dates, shift_range: int = 0, k: int = 3, metric="l1", wrap=True):
     
     """
