@@ -289,7 +289,74 @@ def get_patterns(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Pattern search failed: {str(e)}")
 
+@app.post("/get_multiple_patterns_ohcl")
+def get_patterns(
+    ticker: str = Query(..., description="Ticker symbol"), 
+    start_date: str = Query(..., description="Start date (YYYY-MM-DD)"),
+    end_date: str = Query(..., description="End date (YYYY-MM-DD)"),
+    k: int = Query(3, description="Number of patterns to return"),
+    metric: str = Query("l2", description="Distance metric: 'l1' or 'l2'"),
+    wrap: bool = Query(True, description="Allow wrapping (circular search)"),
+    timeframe: str = Query("1d", description="Timeframe for the reference data ('1d', '1h', etc.)"),
+):
+    if start_date >= end_date:
+        raise HTTPException(status_code=400, detail="Start date must be less than end date")
 
+    try:
+        query_data = read_db_v2(ticker, start_date, end_date, timeframe)
+        if query_data.empty:
+            raise HTTPException(status_code=404, detail="No data found for the given date range")
+
+        reference_data = read_db_v2(ticker, timeframe)
+        if reference_data.empty:
+            raise HTTPException(status_code=404, detail="No reference data found for the given timeframe")
+
+        query_data = query_data.sort_values("date")
+        reference_data = reference_data.sort_values("date")
+
+        query = query_data["close"].values
+        array2 = reference_data["close"].values
+        dates = reference_data["date"].values
+
+        query_return = calculate_query_return(ticker, start_date, end_date)
+
+        best_indices, best_dates, best_subarrays, best_distances, query, array2 = array_with_shift(
+            query, array2, dates, k=k, metric=metric, wrap=wrap
+        )
+
+        matches = []
+        for idx, (indices, dates_, values, dist) in enumerate(zip(best_indices, best_dates, best_subarrays, best_distances)):
+            if not isinstance(indices, (list, tuple, pd.Series)):
+                indices = [indices]
+
+            ohlc_segment = reference_data.iloc[indices][["date", "open", "high", "low", "close"]].copy()
+            ohlc_segment["date"] = ohlc_segment["date"].astype(str)
+
+            match = {
+                "pattern_id": idx + 1,
+                "dates": ohlc_segment["date"].tolist(),
+                "opens": ohlc_segment["open"].astype(float).tolist(),
+                "highs": ohlc_segment["high"].astype(float).tolist(),
+                "lows": ohlc_segment["low"].astype(float).tolist(),
+                "closes": ohlc_segment["close"].astype(float).tolist(),
+                "similarity": float(dist),
+                "query_return": float(query_return),
+                "description": f"{ticker} pattern match {idx+1}"
+            }
+
+            matches.append(match)
+
+        return {
+            "ticker": ticker,
+            "start_date": start_date,
+            "end_date": end_date,
+            "timeframe": timeframe,
+            "query_return": float(query_return),
+            "patterns": matches
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Pattern search failed: {str(e)}")
 
 
 @app.post("/get_dynamic_time_pattern", response_model=SubsequenceResponse)
