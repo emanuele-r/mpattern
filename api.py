@@ -199,43 +199,9 @@ def get_ohlc_endpoint(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-    
-@app.post("/get_single_pattern", response_model=SubsequenceResponse)
-def get_single_pattern(
-    ticker: str = Query(..., description="Ticker symbol"),
-    start_date: str = Query(...),
-    end_date: str = Query(...),
-):
-    ticker= ticker.upper()
-    if start_date >= end_date:
-        raise HTTPException(status_code=400, detail="Start date must be less than end date")
-
-    try:
-        read_db(ticker, start_date, end_date)
-            
-        best_indices, best_dates, best_subarray, query, array2, time_series, best_distance = optimize_calc(
-            ticker, start_date, end_date
-        )
-        
-        query_return = calculate_query_return(ticker, start_date, end_date)
-
-        matches = []
-        match = SubsequenceMatch(
-            dates=[str(d) for d in best_dates],
-            closes=[float(v) for v in best_subarray],
-            similarity=to_float(best_distance),
-            query_return=to_float(query_return),
-            description="" 
-        )
-        matches.append(match)
-               
-        return SubsequenceResponse(matches=matches)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Update price failed: {str(e)}")
 
 
-
-@app.post("/get_mutiple_patterns")
+@app.post("/get_mutiple_patterns", response_model=SubsequenceResponse)
 def get_patterns(
     ticker: str = Query(..., description="Ticker symbol"), 
     start_date: str = Query(...),
@@ -274,20 +240,22 @@ def get_patterns(
             query, array2, dates, k=k, metric=metric, wrap=wrap
         )
 
-        matches = []
-        for dates_, values, dist in zip(best_dates, best_subarrays, best_distances):
-            matches.append(   dates=[str(d) for d in dates_],
+        matches = [
+            SubsequenceMatch(
+                dates=[str(d) for d in dates_],
                 closes=[float(v) for v in values],
                 similarity=to_float(dist),
                 query_return=to_float(query_return),
-                description= "btc on date")
-        
-                
+                description= "btc on date"
+            )
+            for dates_, values, dist in zip(best_dates, best_subarrays, best_distances)
+        ]
 
-        return matches
+        return SubsequenceResponse(matches=matches)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Pattern search failed: {str(e)}")
+
 
 @app.post("/get_multiple_patterns_ohcl")
 def get_patterns(
@@ -299,18 +267,22 @@ def get_patterns(
     wrap: bool = Query(True, description="Allow wrapping (circular search)"),
     timeframe: str = Query("1d", description="Timeframe for the reference data ('1d', '1h', etc.)"),
 ):
+    
     if start_date >= end_date:
         raise HTTPException(status_code=400, detail="Start date must be less than end date")
 
     try:
+       
         query_data = read_db_v2(ticker, start_date, end_date, timeframe)
         if query_data.empty:
             raise HTTPException(status_code=404, detail="No data found for the given date range")
 
+       
         reference_data = read_db_v2(ticker, timeframe)
         if reference_data.empty:
             raise HTTPException(status_code=404, detail="No reference data found for the given timeframe")
 
+        
         query_data = query_data.sort_values("date")
         reference_data = reference_data.sort_values("date")
 
@@ -318,17 +290,21 @@ def get_patterns(
         array2 = reference_data["close"].values
         dates = reference_data["date"].values
 
+        
         query_return = calculate_query_return(ticker, start_date, end_date)
 
+        
         best_indices, best_dates, best_subarrays, best_distances, query, array2 = array_with_shift(
             query, array2, dates, k=k, metric=metric, wrap=wrap
         )
 
         matches = []
         for idx, (indices, dates_, values, dist) in enumerate(zip(best_indices, best_dates, best_subarrays, best_distances)):
+            
             if not isinstance(indices, (list, tuple, pd.Series)):
                 indices = [indices]
 
+            
             ohlc_segment = reference_data.iloc[indices][["date", "open", "high", "low", "close"]].copy()
             ohlc_segment["date"] = ohlc_segment["date"].astype(str)
 
@@ -358,49 +334,3 @@ def get_patterns(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Pattern search failed: {str(e)}")
 
-
-@app.post("/get_dynamic_time_pattern", response_model=SubsequenceResponse)
-def get_dynamic_pattern(
-    ticker: str = Query(..., description="Ticker symbol"),
-    start_date: str = Query(...),
-    end_date: str = Query(...),
-    k: int = Query(3, description="Number of top motifs to return"),
-    metric: str = Query("l2", description="Distance metric: 'l1' or 'l2'"),
-    wrap: bool = Query(True, description="Allow wrapping (circular search)"), 
-    length_tolerance: int = Query(0, description="Maximum length difference between query and reference arrays"),
-):  
-    if start_date >= end_date:
-        raise HTTPException(status_code=400, detail="Start date must be less than end date")
-
-    try:
-        if os.path.exists(f"{ticker}1D.csv"):
-            data = process_data(ticker)
-        else:
-            get_data(ticker, start_date="2008-01-01", end_date=datetime.now().strftime("%Y-%m-%d"), interval="1d")
-            data = process_data(ticker)
-
-        query = data.loc[(data["Date"] >= start_date) & (data["Date"] <= end_date), "Close"].values
-        array2 = data["Close"].values
-        dates = data["Date"].values
-
-        best_indices, best_dates, best_subarrays, best_distances, query, array2 = dynamic_time_warping(
-            query, array2, dates, k=k, metric=metric, wrap=wrap, length_tolerance=length_tolerance
-        )
-        
-        query_return = calculate_query_return(ticker, start_date, end_date)
-
-        matches = [
-            SubsequenceMatch(
-                dates=[str(d) for d in dates_],
-                closes=[float(v) for v in values],
-                similarity=to_float(dist),
-                query_return=[to_float(query_return) for d in query_return],
-                description=""
-            )
-            for dates_, values, dist in zip(best_dates, best_subarrays, best_distances)
-        ]
-
-        return SubsequenceResponse(matches=matches)
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DTW failed: {str(e)}")
