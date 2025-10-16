@@ -241,6 +241,9 @@ def get_patterns(
         best_indices, best_dates, best_subarrays, best_distances, query, array2 = array_with_shift(
             query, array2, dates, k=k, metric=metric, wrap=wrap
         )
+        
+        summary= pattern_forward_return(ticker, best_dates)
+        
         matches = []
         for i, (dates_, values, dist) in enumerate(zip(best_dates, best_subarrays, best_distances)):
             match = SubsequenceMatch(
@@ -252,7 +255,7 @@ def get_patterns(
             )
             matches.append(match)
 
-        return SubsequenceResponse(matches=matches)
+        return matches, summary
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Pattern search failed: {str(e)}")

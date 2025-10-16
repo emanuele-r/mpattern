@@ -4,13 +4,15 @@ from numpy.lib.stride_tricks import sliding_window_view
 import time
 import yfinance as yf
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
+import subprocess
 
 
 def create_db():
-    conn = sqlite3.connect('asset_prices.db')
+    conn = sqlite3.connect("asset_prices.db")
     cursor = conn.cursor()
-    cursor.execute('''
+    cursor.execute(
+        """
         CREATE TABLE IF NOT EXISTS asset_prices (
             ticker TEXT NOT NULL,
             date TEXT NOT NULL ,
@@ -23,240 +25,352 @@ def create_db():
             period TEXT ,
             timeframe TEXT NOT NULL,
             PRIMARY KEY (ticker, date, timeframe)
-            )''')
-    cursor.execute('''CREATE TABLE IF NOT EXISTS ticker_list (
+            )"""
+    )
+    cursor.execute(
+        """CREATE TABLE IF NOT EXISTS ticker_list (
             ticker TEXT NOT NULL,
             category TEXT NOT NULL,
             change FLOAT NOT NULL,
             close FLOAT NOT NULL,
             PRIMARY KEY (ticker)
-            )''')
-    cursor.execute('''CREATE TABLE IF NOT EXISTS favourites(
+            )"""
+    )
+    cursor.execute(
+        """CREATE TABLE IF NOT EXISTS favourites(
             ticker TEXT NOT NULL,
             category TEXT NOT NULL,
             change FLOAT NOT NULL,
             close FLOAT NOT NULL,
             PRIMARY KEY (ticker)
-            )''')
-    cursor.execute('''CREATE TABLE IF NOT EXISTS category(
+            )"""
+    )
+    cursor.execute(
+        """CREATE TABLE IF NOT EXISTS category(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             category TEXT NOT NULL
-            )''')
-    cursor.execute('''CREATE TABLE IF NOT EXISTS  tickers(
+            )"""
+    )
+    cursor.execute(
+        """CREATE TABLE IF NOT EXISTS  tickers(
             id NOT NULL,
             ticker TEXT NOT NULL,
             PRIMARY KEY (ticker)
-    )''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS idx_ticker_date 
-                         ON asset_prices(ticker, date)''')
-    
+    )"""
+    )
+    cursor.execute(
+        """CREATE INDEX IF NOT EXISTS idx_ticker_date 
+                         ON asset_prices(ticker, date)"""
+    )
+
+    cursor.execute(
+        """CREATE TABLE IF NOT EXISTS symbols(
+            ticker TEXT NOT NULL PRIMARY KEY
+    )"""
+    )
+
     cursor.execute("PRAGMA foreign_keys = ON")
     conn.commit()
     conn.close()
     return
 
+
 create_db()
 
 
+def checkTickerExistence():
+    subprocess.run(["./update_ticker.sh"], shell=True)
+    return {"status": "success"}
 
-def insertIntoCategory(category :str):
-    with sqlite3.connect("asset_prices.db") as conn:    
+
+def insertIntoCategory(category: str):
+    with sqlite3.connect("asset_prices.db") as conn:
         cursor = conn.cursor()
-        cursor.execute("INSERT OR IGNORE INTO category (category) VALUES (?)", (category, ))
+        cursor.execute(
+            "INSERT OR IGNORE INTO category (category) VALUES (?)", (category,)
+        )
         conn.commit()
     return
-
-
-
 
 
 def readTickerList():
     with sqlite3.connect("asset_prices.db") as conn:
         cursor = conn.cursor()
-        cursor.execute('''
+        cursor.execute(
+            """
             SELECT a.ticker, a.category, a.change, a.close, c.id
             FROM asset_prices AS a
             INNER JOIN category AS c
             ON a.category = c.category
             GROUP BY c.id
-        ''')
+        """
+        )
         data = cursor.fetchall()
         print(data)
     return data
 
 
-
-
-
-def insertDataIntoTickerList(ticker :str ):
+def insertDataIntoTickerList(ticker: str):
     ticker = ticker.upper()
     with sqlite3.connect("asset_prices.db") as conn:
         cursor = conn.cursor()
-        cursor.execute('''
+        cursor.execute(
+            """
                        INSERT OR IGNORE INTO ticker_list (ticker, category, change, close) 
                        SELECT ticker, category, change, close 
                        FROM asset_prices
-                       WHERE ticker = ?, ''', (ticker, ))
-        data=cursor.fetchall()    
+                       WHERE ticker = ?, """,
+            (ticker,),
+        )
+        data = cursor.fetchall()
     return data
 
 
-
-def deleteDataFromFavourites(ticker :str):
+def deleteDataFromFavourites(ticker: str):
     ticker = ticker.upper()
-    with sqlite3.connect("asset_prices.db") as conn:    
+    with sqlite3.connect("asset_prices.db") as conn:
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM favourites WHERE ticker = ?", (ticker, ))
+        cursor.execute("DELETE FROM favourites WHERE ticker = ?", (ticker,))
         conn.commit()
     return
 
 
-def insertDataIntoFavourites(ticker :str):
+def insertDataIntoFavourites(ticker: str):
     ticker = ticker.upper()
-    with sqlite3.connect("asset_prices.db") as conn:    
+    with sqlite3.connect("asset_prices.db") as conn:
         cursor = conn.cursor()
-        cursor.execute('''INSERT OR IGNORE INTO favourites (ticker, category, change, close)
+        cursor.execute(
+            """INSERT OR IGNORE INTO favourites (ticker, category, change, close)
                        SELECT ticker, category, change, close 
                        FROM asset_prices
-                       WHERE ticker = ?''', (ticker, ))
+                       WHERE ticker = ?""",
+            (ticker,),
+        )
         conn.commit()
     return
 
 
 def readFavorites():
-    with sqlite3.connect("asset_prices.db") as conn :
+    with sqlite3.connect("asset_prices.db") as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM favourites")
         data = cursor.fetchall()
     return data
 
 
-
-def get_data(ticker :str, start_date:str = None, end_date:str = None,period :str = None,  timeframe : str = "1d") -> pd.DataFrame:
+def get_data(
+    ticker: str,
+    start_date: str = None,
+    end_date: str = None,
+    period: str = None,
+    timeframe: str = "1d",
+) -> pd.DataFrame:
     if start_date and end_date:
-        data = yf.download(ticker, start=start_date, end=end_date, threads=True, period=period, interval= timeframe, multi_level_index=False)[["Open", "High", "Low", "Close"]]
+        data = yf.download(
+            ticker,
+            start=start_date,
+            end=end_date,
+            threads=True,
+            period=period,
+            interval=timeframe,
+            multi_level_index=False,
+        )[["Open", "High", "Low", "Close"]]
     elif timeframe:
         if timeframe.endswith("m"):
-            data = yf.download(ticker, period="1d", interval= timeframe, threads=True, multi_level_index=False)[["Open", "High", "Low", "Close"]]
+            data = yf.download(
+                ticker,
+                period="1d",
+                interval=timeframe,
+                threads=True,
+                multi_level_index=False,
+            )[["Open", "High", "Low", "Close"]]
         elif timeframe.endswith("h"):
-            data = yf.download(ticker, period="1mo", interval= timeframe, threads=True, multi_level_index=False)[["Open", "High", "Low", "Close"]]
-        else : 
-            data = yf.download(ticker, period="max", interval= timeframe, threads=True, multi_level_index=False)[["Open", "High", "Low", "Close"]]
-        
+            data = yf.download(
+                ticker,
+                period="1mo",
+                interval=timeframe,
+                threads=True,
+                multi_level_index=False,
+            )[["Open", "High", "Low", "Close"]]
+        else:
+            data = yf.download(
+                ticker,
+                period="max",
+                interval=timeframe,
+                threads=True,
+                multi_level_index=False,
+            )[["Open", "High", "Low", "Close"]]
+
     data.reset_index(inplace=True)
-    data.columns=data.columns.str.lower()    
-    if 'datetime' in data.columns:
+    data.columns = data.columns.str.lower()
+    if "datetime" in data.columns:
         data.rename(columns={"datetime": "date"}, inplace=True)
-       
+
     data["ticker"] = ticker
     data["timeframe"] = timeframe
-    data["period"]  = period
-    data["change"]= data["close"].pct_change()
+    data["period"] = period
+    data["change"] = data["close"].pct_change()
     if ticker.endswith(("-usd", "-USD")):
         data["category"] = "crypto"
     elif ticker.endswith(("=X", "=x")):
         data["category"] = "currency"
     else:
         data["category"] = "stock"
-   
+
     return data
 
 
+def popoulateDb():
+    with sqlite3.connect("asset_prices.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT ticker FROM symbols")
+        data = cursor.fetchall()
+        for row in data:
+            ticker = row[0]
+            print(f"downloading data for {ticker}")
+            downloaded_data = get_data(ticker)
 
-                        
+            if downloaded_data is not None and not downloaded_data.empty:
+                downloaded_data.to_sql(
+                    "asset_prices",
+                    conn,
+                    if_exists="replace",
+                    index=False,
+                )
+                print(f"✓ {ticker} downloaded")
+            else:
+                print("✗ No data returned")
 
-def read_db_v2(ticker:str, start_date: str = None, end_date: str = None, period: str = None, timeframe: str = "1d") -> pd.DataFrame:
+    return
+
+
+def read_db_v2(
+    ticker: str,
+    start_date: str = None,
+    end_date: str = None,
+    period: str = None,
+    timeframe: str = "1d",
+) -> pd.DataFrame:
     ticker = ticker.upper()
-    today = datetime.now().strftime("%Y-%m-%d %H:%M:%S ") if timeframe != "1d" else datetime.now().strftime("%Y-%m-%d")
+    today = (
+        datetime.now().strftime("%Y-%m-%d %H:%M:%S ")
+        if timeframe != "1d"
+        else datetime.now().strftime("%Y-%m-%d")
+    )
     create_db()
-    
+
     try:
-        with sqlite3.connect('asset_prices.db') as conn:
+        with sqlite3.connect("asset_prices.db") as conn:
             cursor = conn.cursor()
-            
-            cursor.execute("SELECT MAX(date) FROM asset_prices WHERE ticker = ? AND timeframe = ?", (ticker, timeframe))
+
+            cursor.execute(
+                "SELECT MAX(date) FROM asset_prices WHERE ticker = ? AND timeframe = ?",
+                (ticker, timeframe),
+            )
             result = cursor.fetchone()
-            max_date = result[0] if result and result[0] else None  
-            
+            max_date = result[0] if result and result[0] else None
+
             if not max_date and timeframe != "1d":
-                updated_data =get_data(ticker ,timeframe=timeframe)
-                if not updated_data.empty:  
-                    updated_data.to_sql("asset_prices", conn, if_exists="append", index=False)
-                
-            elif not max_date :
-                updated_data =get_data(ticker ,start_date="2008-01-01", end_date=today,timeframe=timeframe)
+                updated_data = get_data(ticker, timeframe=timeframe)
                 if not updated_data.empty:
-                    updated_data.to_sql("asset_prices", conn, if_exists="append", index=False)
-                
+                    updated_data.to_sql(
+                        "asset_prices", conn, if_exists="append", index=False
+                    )
+
+            elif not max_date:
+                updated_data = get_data(
+                    ticker, start_date="2008-01-01", end_date=today, timeframe=timeframe
+                )
+                if not updated_data.empty:
+                    updated_data.to_sql(
+                        "asset_prices", conn, if_exists="append", index=False
+                    )
+
             else:
                 if timeframe == "1d":
-                    last_date = max_date.split()[0] if ' ' in max_date else max_date[:10]  
+                    last_date = (
+                        max_date.split()[0] if " " in max_date else max_date[:10]
+                    )
                 else:
                     last_date = max_date
                 if last_date != today:
-                    updated_data = get_data(ticker, start_date=last_date, end_date=today, timeframe=timeframe)
+                    updated_data = get_data(
+                        ticker,
+                        start_date=last_date,
+                        end_date=today,
+                        timeframe=timeframe,
+                    )
                     if not updated_data.empty:
                         if timeframe == "1d":
-                            updated_data['date'] = pd.to_datetime(updated_data['date']).dt.strftime('%Y-%m-%d')
+                            updated_data["date"] = pd.to_datetime(
+                                updated_data["date"]
+                            ).dt.strftime("%Y-%m-%d")
                         else:
-                            updated_data['date'] = pd.to_datetime(updated_data['date']).dt.strftime('%Y-%m-%d %H:%M:%S')
+                            updated_data["date"] = pd.to_datetime(
+                                updated_data["date"]
+                            ).dt.strftime("%Y-%m-%d %H:%M:%S")
                         cursor.executemany(
-                        """INSERT OR IGNORE INTO asset_prices 
+                            """INSERT OR IGNORE INTO asset_prices 
                            (ticker, date, open, high, low, close, change,period,  category, timeframe) 
                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                        updated_data.values.tolist()
+                            updated_data.values.tolist(),
                         )
                         conn.commit()
-            
-            
+
             if start_date and end_date:
-                cursor.execute("SELECT * FROM asset_prices WHERE ticker = ? AND timeframe = ? AND date BETWEEN ? AND ?",
-                              (ticker, timeframe, start_date, end_date))
+                cursor.execute(
+                    "SELECT * FROM asset_prices WHERE ticker = ? AND timeframe = ? AND date BETWEEN ? AND ?",
+                    (ticker, timeframe, start_date, end_date),
+                )
             elif ticker and timeframe:
-                cursor.execute("SELECT * FROM asset_prices WHERE ticker = ? AND timeframe = ?",
-                              (ticker, timeframe))
+                cursor.execute(
+                    "SELECT * FROM asset_prices WHERE ticker = ? AND timeframe = ?",
+                    (ticker, timeframe),
+                )
             else:
                 cursor.execute("SELECT * FROM asset_prices")
-            
-           
-            
+
             data = cursor.fetchall()
             data = pd.DataFrame(data, columns=[desc[0] for desc in cursor.description])
             data.drop_duplicates(inplace=True)
-            critical_columns = ['ticker', 'date', 'open', 'high', 'low', 'close', 'category', 'timeframe']
+            critical_columns = [
+                "ticker",
+                "date",
+                "open",
+                "high",
+                "low",
+                "close",
+                "category",
+                "timeframe",
+            ]
             data.dropna(subset=critical_columns, inplace=True)
-            
+
             return data
-            
+
     except Exception as e:
-        raise ValueError(f"Error reading database: {e}")    
-
-
-
+        raise ValueError(f"Error reading database: {e}")
 
 
 def calculate_query_return(ticker: str, start_date: str, end_date: str) -> float:
-    try :
-        query = read_db_v2(ticker, start_date , end_date)
-        query_return = (query.close.iat[-1]/ query.close.iat[0]) - 1
+    try:
+        query = read_db_v2(ticker, start_date, end_date)
+        query_return = (query.close.iat[-1] / query.close.iat[0]) - 1
 
-        if len(query) <2 :
+        if len(query) < 2:
             raise ValueError("Error : query length is less than 2")
 
     except Exception as e:
         raise ValueError(f"Error reading database: {e}")
-        
+
     return query_return
 
 
-
-
-
-def array_with_shift(array, array2, dates, shift_range: int = 0, k: int = 3, metric="l1", wrap=True):
-    
+def array_with_shift(
+    array, array2, dates, shift_range: int = 0, k: int = 3, metric="l1", wrap=True
+):
     """
     Vectorized motif search: find top-k matches of `array` inside `array2`.
-    
+
     Parameters
     ----------
     array : array-like
@@ -280,13 +394,17 @@ def array_with_shift(array, array2, dates, shift_range: int = 0, k: int = 3, met
     if len(array2) == 0:
         raise ValueError("Reference array is empty")
     if len(array2) < len(array):
-        raise ValueError(f"Reference array (len={len(array2)}) is shorter than query array (len={len(array)})")
+        raise ValueError(
+            f"Reference array (len={len(array2)}) is shorter than query array (len={len(array)})"
+        )
     if len(dates) != len(array2):
-        raise ValueError(f"Dates array (len={len(dates)}) must match reference array (len={len(array2)})")
+        raise ValueError(
+            f"Dates array (len={len(dates)}) must match reference array (len={len(array2)})"
+        )
 
     m = len(array)
     n = len(array2)
-    
+
     array_mean = np.mean(array)
     array_std = np.std(array)
     if array_std > 0:
@@ -295,45 +413,139 @@ def array_with_shift(array, array2, dates, shift_range: int = 0, k: int = 3, met
         array_normalized = array - array_mean
 
     if wrap:
-        extended_prices = np.concatenate([array2, array2[:m-1]])
-        extended_dates = np.concatenate([dates, dates[:m-1]])
+        extended_prices = np.concatenate([array2, array2[: m - 1]])
+        extended_dates = np.concatenate([dates, dates[: m - 1]])
         source_array = extended_prices
     else:
         extended_prices = array2
         extended_dates = dates
         source_array = array2
-    
+
     subsequences = sliding_window_view(extended_prices, m)
-    
+
     subseq_means = np.mean(subsequences, axis=1, keepdims=True)
     subseq_stds = np.std(subsequences, axis=1, keepdims=True)
-    
+
     subseq_stds = np.where(subseq_stds > 0, subseq_stds, 1.0)
     subsequences_normalized = (subsequences - subseq_means) / subseq_stds
-    
+
     if metric == "l1":
         dists = np.sum(np.abs(subsequences_normalized - array_normalized), axis=1)
     elif metric == "l2":
-        dists = np.sqrt(np.sum((subsequences_normalized - array_normalized) ** 2, axis=1))
+        dists = np.sqrt(
+            np.sum((subsequences_normalized - array_normalized) ** 2, axis=1)
+        )
     else:
         raise ValueError("metric must be 'l1' or 'l2'")
-    
+
     k_actual = min(k, len(dists))
-    
+
     if k_actual > 0:
-        best_idx = np.argpartition(dists, k_actual-1)[:k_actual]
+        best_idx = np.argpartition(dists, k_actual - 1)[:k_actual]
         best_idx = best_idx[np.argsort(dists[best_idx])]
     else:
         best_idx = np.array([], dtype=int)
-    
+
     best_distances = dists[best_idx].tolist()
     best_starts = best_idx.tolist()
     best_indices = [list(range(start, start + m)) for start in best_starts]
-    best_subarrays = [source_array[start:start+m].tolist() for start in best_starts]
-    best_dates = [extended_dates[start:start+m].tolist() for start in best_starts]
-    
+    best_subarrays = [source_array[start : start + m].tolist() for start in best_starts]
+    best_dates = [extended_dates[start : start + m].tolist() for start in best_starts]
+
     return best_indices, best_dates, best_subarrays, best_distances, array, array2
 
+
+def pattern_forward_return(
+    ticker: str,
+    best_dates: list[list[str]],
+    rolling_window_low: int = 7,
+    rolling_window_high: int = 30,
+) -> float:
+    ticker = ticker.upper()
+
+    with sqlite3.connect("asset_prices.db") as conn:
+        cursor_monthly = conn.cursor()
+        cursor_week = conn.cursor()
+        cursor = conn.cursor()
+        forward_return = []
+        avgReturn = []
+        summary = []
+        seven_day_returns = []
+        monthly_returns = []
+        pattern_returns = []
+
+        for idx, pat in enumerate(best_dates):
+            date_str = pat[-1].strip()
+            end_date_dt = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
+            end_week_dt = end_date_dt + timedelta(days=rolling_window_low)
+            end_month_dt = end_date_dt + timedelta(days=rolling_window_high)
+            cursor.execute(
+                "SELECT close, date from asset_prices WHERE  date >= ? AND date < ? AND ticker = ?",
+                (best_dates[idx][0], best_dates[idx][-1], ticker),
+            )
+            cursor_week.execute(
+                """SELECT close, date from asset_prices WHERE date BETWEEN ? AND ? AND ticker = ?""",
+                (end_date_dt, end_week_dt, ticker),
+            )
+            cursor_monthly.execute(
+                """SELECT close from asset_prices WHERE date BETWEEN ? AND ? AND ticker = ?""",
+                (end_date_dt, end_month_dt, ticker),
+            )
+            weekly_data = cursor_week.fetchall()
+            monthly_data = cursor_monthly.fetchall()
+            data = cursor.fetchall()
+            sevenDayReturnAfterPattern = (
+                weekly_data[-1][0] / weekly_data[0][0] - 1
+            ) * 100
+            monthlyReturnAfterPattern = (
+                monthly_data[-1][0] / monthly_data[0][0] - 1
+            ) * 100
+            avgReturnForPattern = (data[-1][0] / data[0][0] - 1) * 100
+
+            seven_day_returns.append(sevenDayReturnAfterPattern)
+            monthly_returns.append(monthlyReturnAfterPattern)
+            pattern_returns.append(avgReturnForPattern)
+
+            forward_return.append(
+                {
+                    "patternIdx": idx,
+                    "sevenDayReturnAfterPattern": sevenDayReturnAfterPattern,
+                    "monthlyReturnAfterPattern": monthlyReturnAfterPattern,
+                }
+            )
+
+        avgReturn.append(
+            {
+                "avgReturn": (
+                    sum(pattern_returns) / len(pattern_returns)
+                    if pattern_returns
+                    else 0
+                ),
+                "avgSevenDayReturn": (
+                    sum(seven_day_returns) / len(seven_day_returns)
+                    if seven_day_returns
+                    else 0
+                ),
+                "avgMonthlyReturn": (
+                    sum(monthly_returns) / len(monthly_returns)
+                    if monthly_returns
+                    else 0
+                ),
+            }
+        )
+
+        summary.append(
+            {
+                "Pattern ": forward_return,
+                "summary": {
+                    "Average 7 day return": avgReturn[0]["avgSevenDayReturn"],
+                    "Average 30 day return": avgReturn[0]["avgMonthlyReturn"],
+                    "Pattern Average return": avgReturn[0]["avgReturn"],
+                },
+            }
+        )
+
+    return summary
 
 
 def dynamic_time_warping(
@@ -344,7 +556,7 @@ def dynamic_time_warping(
     k: int = 3,
     metric="l1",
     wrap=True,
-    length_tolerance: int = 0
+    length_tolerance: int = 0,
 ):
     """
     Vectorized motif search: find top-k matches of `array` inside `array2`,
@@ -391,24 +603,22 @@ def dynamic_time_warping(
             continue
 
         if wrap:
-            extended = np.concatenate([array2, array2[:window_size - 1]])
+            extended = np.concatenate([array2, array2[: window_size - 1]])
             source_array = extended
             subsequences = sliding_window_view(extended, window_size)
             if dates is not None:
-                extended_dates = np.concatenate([dates, dates[:window_size - 1]])
+                extended_dates = np.concatenate([dates, dates[: window_size - 1]])
         else:
             source_array = array2
             subsequences = sliding_window_view(array2, window_size)
             if dates is not None:
                 extended_dates = dates
-        
+
         dates_to_slice = extended_dates if dates is not None else None
 
         if window_size != m:
             query_rescaled = np.interp(
-                np.linspace(0, m - 1, window_size),
-                np.arange(m),
-                array
+                np.linspace(0, m - 1, window_size), np.arange(m), array
             )
         else:
             query_rescaled = array
@@ -421,18 +631,16 @@ def dynamic_time_warping(
             raise ValueError("metric must be 'l1' or 'l2'")
 
         for start, dist in enumerate(dists):
-            
-            prices = source_array[start:start+window_size] 
-            
-            current_dates = dates_to_slice[start:start+window_size] if dates_to_slice is not None else None
-            
-            best_matches.append((
-                start,
-                dist,
-                window_size,
-                prices,
-                current_dates
-            ))
+
+            prices = source_array[start : start + window_size]
+
+            current_dates = (
+                dates_to_slice[start : start + window_size]
+                if dates_to_slice is not None
+                else None
+            )
+
+            best_matches.append((start, dist, window_size, prices, current_dates))
 
     best_matches = sorted(best_matches, key=lambda x: x[1])[:k]
 
