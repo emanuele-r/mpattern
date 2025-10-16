@@ -125,7 +125,6 @@ def insertDataIntoTickerList(ticker: str):
     return data
 
 
-insertDataIntoTickerList("aapl")
 
 
 def deleteDataFromFavourites(ticker: str):
@@ -353,7 +352,6 @@ def read_db_v2(
         raise ValueError(f"Error reading database: {e}")
 
 
-read_db_v2(ticker="AAPL", timeframe="1d")
 
 
 def calculate_query_return(ticker: str, start_date: str, end_date: str) -> float:
