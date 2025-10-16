@@ -115,15 +115,17 @@ def insertDataIntoTickerList(ticker: str):
     with sqlite3.connect("asset_prices.db") as conn:
         cursor = conn.cursor()
         cursor.execute(
-            """
-                       INSERT OR IGNORE INTO ticker_list (ticker, category, change, close) 
+            """INSERT OR IGNORE INTO ticker_list (ticker, category, change, close)
                        SELECT ticker, category, change, close 
                        FROM asset_prices
-                       WHERE ticker = ?, """,
+                       WHERE ticker = ?""",
             (ticker,),
         )
         data = cursor.fetchall()
     return data
+
+
+insertDataIntoTickerList("aapl")
 
 
 def deleteDataFromFavourites(ticker: str):
@@ -349,6 +351,9 @@ def read_db_v2(
 
     except Exception as e:
         raise ValueError(f"Error reading database: {e}")
+
+
+read_db_v2(ticker="AAPL", timeframe="1d")
 
 
 def calculate_query_return(ticker: str, start_date: str, end_date: str) -> float:
