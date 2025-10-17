@@ -122,8 +122,8 @@ def insertDataIntoTickerList():
     with sqlite3.connect("asset_prices.db") as conn:
         cursor = conn.cursor()
         cursor.execute(
-            """INSERT OR IGNORE INTO ticker_list ( id, ticker, category, change, close)
-                       SELECT  id, ticker, category, change, close 
+            """INSERT OR IGNORE INTO ticker_list ( ticker, category, change, close, id)
+                       SELECT   ticker, category, change, close , id
                        FROM asset_prices
                       """
         )
@@ -131,7 +131,6 @@ def insertDataIntoTickerList():
     return data
 
 
-insertDataIntoTickerList()
 
 
 def deleteDataFromFavourites(ticker: str):
