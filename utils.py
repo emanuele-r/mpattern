@@ -108,7 +108,7 @@ def readTickerList():
         cursor = conn.cursor()
         cursor.execute(
             """
-            SELECT  id,ticker, category, change, close
+            SELECT  ticker, category, change, close, id
             FROM ticker_list
         """
         )
@@ -129,8 +129,6 @@ def insertDataIntoTickerList():
         )
         data = cursor.fetchall()
     return data
-
-
 
 
 def deleteDataFromFavourites(ticker: str):
