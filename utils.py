@@ -108,7 +108,7 @@ def readTickerList():
         cursor = conn.cursor()
         cursor.execute(
             """
-            SELECT ticker, category, change, close
+            SELECT id, ticker, category, change, close
             FROM ticker_list
         """
         )
@@ -122,8 +122,8 @@ def insertDataIntoTickerList():
     with sqlite3.connect("asset_prices.db") as conn:
         cursor = conn.cursor()
         cursor.execute(
-            """INSERT OR IGNORE INTO ticker_list (ticker, category, change, close)
-                       SELECT ticker, category, change, close 
+            """INSERT OR IGNORE INTO ticker_list (id, ticker, category, change, close)
+                       SELECT id, ticker, category, change, close 
                        FROM asset_prices
                       """
         )
