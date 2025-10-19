@@ -76,9 +76,6 @@ def checkTickerExistence():
     return
 
 
-
-
-
 def readCategory():
     with sqlite3.connect("asset_prices.db") as conn:
         cursor = conn.cursor()
@@ -87,17 +84,30 @@ def readCategory():
     return data
 
 
-def readTickerList():
+def readTickerList(category: str = None):
     with sqlite3.connect("asset_prices.db") as conn:
         cursor = conn.cursor()
-        cursor.execute(
-            """
+        if category:
+            cursor.execute(
+                """
+                SELECT  *
+                FROM ticker_list
+                WHERE category = ?
+            """,
+                (category,),
+            )
+            data = cursor.fetchall()
+            print(data)
+            return data
+        else:
+            cursor.execute(
+                """
             SELECT  *
             FROM ticker_list
         """
-        )
+            )
         data = cursor.fetchall()
-        # print(data)
+        print(data)
     return data
 
 
@@ -114,7 +124,6 @@ def insertDataIntoTickerList():
         )
         data = cursor.fetchall()
     return data
-
 
 
 def deleteDataFromFavourites(ticker: str):
@@ -233,7 +242,6 @@ def popoulateDb():
                 print("✗ No data returned")
 
     return
-
 
 
 def read_db_v2(
