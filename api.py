@@ -222,7 +222,7 @@ def get_ohlc_endpoint(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/get_mutiple_patterns", response_model=SubsequenceResponse)
+@app.post("/get_mutiple_patterns")
 def get_patterns(
     ticker: str = Query(..., description="Ticker symbol"),
     start_date: str = Query(...),
