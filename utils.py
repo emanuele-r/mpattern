@@ -84,13 +84,23 @@ def readCategory():
     return data
 
 
+def updateCategory():
+    with sqlite3.connect("asset_prices.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+           """INSERT OR IGNORE INTO category
+            SELECT category FROM ticker_list GROUP BY category"""
+        )
+        conn.commit()
+    return
+
 def readTickerList(category: str = None):
     with sqlite3.connect("asset_prices.db") as conn:
         cursor = conn.cursor()
         if category:
             cursor.execute(
                 """
-                SELECT  *
+                SELECT  ticker, category, change, close
                 FROM ticker_list
                 WHERE category = ?
             """,
@@ -102,7 +112,7 @@ def readTickerList(category: str = None):
         else:
             cursor.execute(
                 """
-            SELECT  *
+            SELECT  ticker, category, change, close 
             FROM ticker_list
         """
             )
