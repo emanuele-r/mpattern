@@ -84,15 +84,7 @@ def readCategory():
     return data
 
 
-def updateCategory():
-    with sqlite3.connect("asset_prices.db") as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-           """INSERT OR IGNORE INTO category
-            SELECT category FROM ticker_list GROUP BY category"""
-        )
-        conn.commit()
-    return
+
 
 def readTickerList(category: str = None):
     with sqlite3.connect("asset_prices.db") as conn:
@@ -107,7 +99,7 @@ def readTickerList(category: str = None):
                 (category,),
             )
             data = cursor.fetchall()
-            print(data)
+
             return data
         else:
             cursor.execute(
@@ -117,7 +109,7 @@ def readTickerList(category: str = None):
         """
             )
         data = cursor.fetchall()
-        print(data)
+
     return data
 
 
@@ -134,6 +126,7 @@ def insertDataIntoTickerList():
         )
         data = cursor.fetchall()
     return data
+
 
 
 def deleteDataFromFavourites(ticker: str):
