@@ -30,11 +30,11 @@ def create_db():
     )
     cursor.execute(
         """CREATE TABLE IF NOT EXISTS ticker_list (
+            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
             ticker TEXT NOT NULL,
             category TEXT NOT NULL,
             change FLOAT NOT NULL,
-            close FLOAT NOT NULL,
-            PRIMARY KEY (ticker)
+            close FLOAT NOT NULL
             )"""
     )
     cursor.execute(
@@ -45,23 +45,6 @@ def create_db():
             close FLOAT NOT NULL,
             PRIMARY KEY (ticker)
             )"""
-    )
-    cursor.execute(
-        """CREATE TABLE IF NOT EXISTS category(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            category TEXT NOT NULL
-            )"""
-    )
-    cursor.execute(
-        """CREATE TABLE IF NOT EXISTS  tickers(
-            id NOT NULL,
-            ticker TEXT NOT NULL,
-            PRIMARY KEY (ticker)
-    )"""
-    )
-    cursor.execute(
-        """CREATE INDEX IF NOT EXISTS idx_ticker_date 
-                         ON asset_prices(ticker, date)"""
     )
 
     cursor.execute(
@@ -93,14 +76,15 @@ def checkTickerExistence():
     return
 
 
-def insertIntoCategory(category: str):
+
+
+
+def readCategory():
     with sqlite3.connect("asset_prices.db") as conn:
         cursor = conn.cursor()
-        cursor.execute(
-            "INSERT OR IGNORE INTO category (category) VALUES (?)", (category,)
-        )
-        conn.commit()
-    return
+        cursor.execute("SELECT category FROM ticker_list GROUP BY category")
+        data = cursor.fetchall()
+    return data
 
 
 def readTickerList():
@@ -108,7 +92,7 @@ def readTickerList():
         cursor = conn.cursor()
         cursor.execute(
             """
-            SELECT  ticker, category, change, close, id
+            SELECT  *
             FROM ticker_list
         """
         )
@@ -122,13 +106,15 @@ def insertDataIntoTickerList():
     with sqlite3.connect("asset_prices.db") as conn:
         cursor = conn.cursor()
         cursor.execute(
-            """INSERT OR IGNORE INTO ticker_list ( ticker, category, change, close, id)
-                       SELECT   ticker, category, change, close , id
+            """INSERT OR IGNORE INTO ticker_list (  ticker, category, change, close)
+                       SELECT ticker, category, change, close 
                        FROM asset_prices
+                       WHERE date = (SELECT MAX(date) FROM asset_prices)
                       """
         )
         data = cursor.fetchall()
     return data
+
 
 
 def deleteDataFromFavourites(ticker: str):
@@ -247,6 +233,7 @@ def popoulateDb():
                 print("✗ No data returned")
 
     return
+
 
 
 def read_db_v2(

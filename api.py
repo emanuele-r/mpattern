@@ -117,7 +117,7 @@ def get_tickers():
         categoryTypes = []
         tickers = []
         for row in data:
-            ticker, category, change, price, id = row  
+            id, ticker, category, change, price = row  
 
             categoryTypes.append({"category": f"{id}-{category}", "ticker": ticker})
             tickers.append({"category": f"{id}-{category}", "symbol": ticker, "price": price, "change": change})
@@ -130,6 +130,16 @@ def get_tickers():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+
+
+@app.get("/get_category_list")
+def fetch_category_list():
+    try:
+        data = readCategory()
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/historical_prices")
