@@ -120,10 +120,10 @@ def deleteFromFavourites(ticker: str = Query(..., description="Ticker symbol")):
 
 
 @app.get("/get_ticker_list")
-def get_tickers():
+def get_tickers(category : str = Query(default=None, description="Category")):
 
     try:
-        data = readTickerList()
+        data = readTickerList(category)
         tickers = []
         for row in data:
             ticker, category, change, price = row
