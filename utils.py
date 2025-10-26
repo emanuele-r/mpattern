@@ -295,7 +295,6 @@ def read_db_v2(
                         "INSERT OR REPLACE INTO asset_prices (ticker, date, open, high, low, close,change,category, period, timeframe) VALUES (?, ?, ?, ?, ?, ?, ?, ?,?, ?)",
                         records,
                     )
-                    insertDataIntoTickerList()
             elif isUptoDate != today:
                 upDateData = get_data(
                     ticker=ticker,
@@ -324,7 +323,6 @@ def read_db_v2(
                         "INSERT OR REPLACE INTO asset_prices (ticker, date, open, high, low, close,change,category, period, timeframe) VALUES (?, ?, ?, ?, ?, ?, ?, ?,?, ?)",
                         records,
                     )
-                    insertDataIntoTickerList()
             if start_date and end_date:
                 cursor.execute(
                     "SELECT * FROM asset_prices WHERE date BETWEEN ? AND ? AND ticker = ? AND timeframe = ?",
