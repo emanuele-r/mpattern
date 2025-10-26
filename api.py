@@ -19,6 +19,7 @@ app = FastAPI(
 origins = [
     "http://localhost",
     "http://localhost:8000",
+    "https://yay-jvxx.onrender.com/",
 ]
 
 app.add_middleware(
