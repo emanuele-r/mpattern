@@ -52,6 +52,9 @@ def create_db():
             ticker TEXT NOT NULL PRIMARY KEY
     )"""
     )
+    cursor.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_ticker ON asset_prices (ticker, date, timeframe)"
+    )
 
     cursor.execute("PRAGMA foreign_keys = ON")
     conn.commit()
@@ -82,8 +85,6 @@ def readCategory():
         cursor.execute("SELECT category FROM ticker_list GROUP BY category")
         data = cursor.fetchall()
     return data
-
-
 
 
 def readTickerList(category: str = None):
@@ -126,7 +127,6 @@ def insertDataIntoTickerList():
         )
         data = cursor.fetchall()
     return data
-
 
 
 def deleteDataFromFavourites(ticker: str):
@@ -256,74 +256,77 @@ def read_db_v2(
 ) -> pd.DataFrame:
     ticker = ticker.upper()
     today = (
-        datetime.now().strftime("%Y-%m-%d %H:%M:%S ")
-        if timeframe != "1d"
-        else datetime.now().strftime("%Y-%m-%d")
+        datetime.now().strftime("%Y-%m-%d")
+        if timeframe == "1d"
+        else datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     )
-    create_db()
 
     try:
         with sqlite3.connect("asset_prices.db") as conn:
             cursor = conn.cursor()
 
             cursor.execute(
-                "SELECT MAX(date) FROM asset_prices WHERE ticker = ? AND timeframe = ?",
+                "SELECT MAX (date) FROM asset_prices where ticker =? AND timeframe =?",
                 (ticker, timeframe),
             )
             result = cursor.fetchone()
-            max_date = result[0] if result and result[0] else None
+            isUptoDate = result[0] if result[0] is not None else None
 
-            if not max_date and timeframe != "1d":
-                updated_data = get_data(ticker, timeframe=timeframe)
-                if not updated_data.empty:
-                    updated_data.to_sql(
-                        "asset_prices", conn, if_exists="append", index=False
-                    )
-
-            elif not max_date:
-                updated_data = get_data(
-                    ticker, start_date="2008-01-01", end_date=today, timeframe=timeframe
-                )
-                if not updated_data.empty:
-                    updated_data.to_sql(
-                        "asset_prices", conn, if_exists="append", index=False
-                    )
-
-            else:
-                if timeframe == "1d":
-                    last_date = (
-                        max_date.split()[0] if " " in max_date else max_date[:10]
-                    )
-                else:
-                    last_date = max_date
-                if last_date != today:
-                    updated_data = get_data(
-                        ticker,
-                        start_date=last_date,
-                        end_date=today,
-                        timeframe=timeframe,
-                    )
-                    if not updated_data.empty:
-                        if timeframe == "1d":
-                            updated_data["date"] = pd.to_datetime(
-                                updated_data["date"]
-                            ).dt.strftime("%Y-%m-%d")
-                        else:
-                            updated_data["date"] = pd.to_datetime(
-                                updated_data["date"]
-                            ).dt.strftime("%Y-%m-%d %H:%M:%S")
-                        cursor.executemany(
-                            """INSERT OR IGNORE INTO asset_prices 
-                           (ticker, date, open, high, low, close, change,period,  category, timeframe) 
-                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                            updated_data.values.tolist(),
+            if isUptoDate != today and timeframe != "1d":
+                upDateData = get_data(ticker=ticker, timeframe=timeframe)
+                if not upDateData.empty:
+                    records = [
+                        (
+                            ticker,
+                            str(row["date"]),
+                            row["open"],
+                            row["high"],
+                            row["low"],
+                            row["close"],
+                            row["change"],
+                            row["category"],
+                            row["period"],
+                            timeframe,
                         )
-                        conn.commit()
+                        for _, row in upDateData.iterrows()
+                    ]
 
+                    cursor.executemany(
+                        "INSERT OR REPLACE INTO asset_prices (ticker, date, open, high, low, close,change,category, period, timeframe) VALUES (?, ?, ?, ?, ?, ?, ?, ?,?, ?)",
+                        records,
+                    )
+            elif isUptoDate != today:
+                upDateData = get_data(
+                    ticker=ticker,
+                    start_date="2008-01-01",
+                    end_date=today,
+                    timeframe=timeframe,
+                )
+                if not upDateData.empty:
+                    records = [
+                        (
+                            ticker,
+                            str(row["date"]),
+                            row["open"],
+                            row["high"],
+                            row["low"],
+                            row["close"],
+                            row["change"],
+                            row["category"],
+                            row["period"],
+                            timeframe,
+                        )
+                        for _, row in upDateData.iterrows()
+                    ]
+
+                    cursor.executemany(
+                        "INSERT OR REPLACE INTO asset_prices (ticker, date, open, high, low, close,change,category, period, timeframe) VALUES (?, ?, ?, ?, ?, ?, ?, ?,?, ?)",
+                        records,
+                    )
             if start_date and end_date:
                 cursor.execute(
-                    "SELECT * FROM asset_prices WHERE ticker = ? AND timeframe = ? AND date BETWEEN ? AND ?",
-                    (ticker, timeframe, start_date, end_date),
+                    "SELECT * FROM asset_prices WHERE date BETWEEN ? AND ? AND ticker = ? AND timeframe = ?",
+                    (start_date, end_date, ticker, timeframe),
                 )
             elif ticker and timeframe:
                 cursor.execute(
@@ -331,27 +334,18 @@ def read_db_v2(
                     (ticker, timeframe),
                 )
             else:
-                cursor.execute("SELECT * FROM asset_prices")
+                cursor.execute("SELECT * FROM asset_prices WHERE ticker = ?", (ticker,))
 
-            data = cursor.fetchall()
-            data = pd.DataFrame(data, columns=[desc[0] for desc in cursor.description])
-            data.drop_duplicates(inplace=True)
-            critical_columns = [
-                "ticker",
-                "date",
-                "open",
-                "high",
-                "low",
-                "close",
-                "category",
-                "timeframe",
-            ]
-            data.dropna(subset=critical_columns, inplace=True)
-
-            return data
+            updated_data = cursor.fetchall()
+            updated_data = pd.DataFrame(
+                updated_data, columns=[col[0] for col in cursor.description]
+            )
+            print(updated_data)
 
     except Exception as e:
-        raise ValueError(f"Error reading database: {e}")
+        raise ValueError(f"Error reading database : {e}")
+
+    return updated_data
 
 
 def calculate_query_return(ticker: str, start_date: str, end_date: str) -> float:
@@ -539,7 +533,7 @@ def pattern_forward_return(
 
         summary.append(
             {
-                "Pattern ": forward_return,
+                "Pattern": forward_return,
                 "summary": {
                     "Average 7 day return": avgReturn[0]["avgSevenDayReturn"],
                     "Average 30 day return": avgReturn[0]["avgMonthlyReturn"],
