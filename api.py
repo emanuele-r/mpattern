@@ -121,7 +121,7 @@ def deleteFromFavourites(ticker: str = Query(..., description="Ticker symbol")):
 
 
 @app.get("/get_ticker_list")
-def get_tickers(category : str = Query(default=None, description="Category")):
+def get_tickers(category: str = Query(default=None, description="Category")):
 
     try:
         data = readTickerList(category)
@@ -201,22 +201,28 @@ def get_ohlc_endpoint(
     """
 
     try:
-        data = read_db_v2(ticker, start_date, end_date, timeframe)
+        data = read_db_v2(
+            ticker=ticker, start_date=start_date, end_date=end_date, timeframe=timeframe
+        )
         if data.empty:
             raise HTTPException(status_code=404, detail=f"No data found for {ticker}")
 
-        ohlc_data = [
-            {
-                "date": str(data["date"][row]),
-                "open": float(data["open"][row]),
-                "high": float(data["high"][row]),
-                "low": float(data["low"][row]),
-                "close": float(data["close"][row]),
-                "timeframe": str(data["timeframe"][row]),
-            }
-            for row in data.index
-        ]
+        ohlc_data = []
+        for row in data.index:
+            data_row = data.loc[row]
+            ohlc_data.append(
+                {
+                    "date": str(data_row["date"]),
+                    "open": float(data_row["open"]),
+                    "high": float(data_row["high"]),
+                    "low": float(data_row["low"]),
+                    "close": float(data_row["close"]),
+                    "timeframe": str(data_row["timeframe"]),
+                }
+            )
+
         return ohlc_data
+        
     except HTTPException:
         raise
     except Exception as e:

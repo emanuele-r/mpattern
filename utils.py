@@ -348,6 +348,7 @@ def read_db_v2(
     return updated_data
 
 
+
 def calculate_query_return(ticker: str, start_date: str, end_date: str) -> float:
     try:
         query = read_db_v2(ticker, start_date, end_date)
