@@ -119,7 +119,7 @@ def insertDataIntoTickerList():
     with sqlite3.connect("asset_prices.db") as conn:
         cursor = conn.cursor()
         cursor.execute(
-            """INSERT OR IGNORE INTO ticker_list (  ticker, category, change, close)
+            """INSERT OR IGNORE INTO ticker_list (ticker, category, change, close)
                        SELECT ticker, category, change, close 
                        FROM asset_prices
                        WHERE date = (SELECT MAX(date) FROM asset_prices)
@@ -143,7 +143,7 @@ def insertDataIntoFavourites(ticker: str):
     with sqlite3.connect("asset_prices.db") as conn:
         cursor = conn.cursor()
         cursor.execute(
-            """INSERT OR UPDATE INTO favourites (ticker, category, change, close)
+            """INSERT OR IGNORE INTO favourites (ticker, category, change, close)
                        SELECT ticker, category, change, close 
                        FROM asset_prices
                        WHERE ticker = ?""",
@@ -160,6 +160,7 @@ def readFavorites():
         data = cursor.fetchall()
     return data
 
+print(readFavorites())
 
 def get_data(
     ticker: str,
@@ -346,7 +347,6 @@ def read_db_v2(
         raise ValueError(f"Error reading database : {e}")
 
     return updated_data
-
 
 
 def calculate_query_return(ticker: str, start_date: str, end_date: str) -> float:
