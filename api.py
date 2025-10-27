@@ -199,6 +199,7 @@ def get_ohlc_endpoint(
 
     Example: POST /get_ohlc?ticker=btc-usd&start_date=2024-01-01&end_date=2024-12-31&timeframe=1d
     """
+    ticker = ticker.upper()
 
     try:
         data = read_db_v2(
