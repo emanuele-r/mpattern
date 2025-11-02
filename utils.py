@@ -12,48 +12,69 @@ import asyncio
 def create_db():
     conn = sqlite3.connect("asset_prices.db")
     cursor = conn.cursor()
+
+    cursor.execute("PRAGMA journal_mode = WAL;")
+    cursor.execute("PRAGMA synchronous = NORMAL;")
+    cursor.execute("PRAGMA foreign_keys = ON;")
+
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS asset_prices (
             ticker TEXT NOT NULL,
-            date TEXT NOT NULL ,
+            date TEXT NOT NULL,          
             open REAL NOT NULL,
             high REAL NOT NULL,
             low REAL NOT NULL,
             close REAL NOT NULL,
-            change FLOAT ,
+            change REAL,
             category TEXT NOT NULL,
-            period TEXT ,
+            period TEXT,
             timeframe TEXT NOT NULL,
+            FOREIGN KEY (ticker) REFERENCES symbols(ticker)
+                ON DELETE CASCADE ON UPDATE CASCADE,
             PRIMARY KEY (ticker, date, timeframe)
-            )"""
+        ) WITHOUT ROWID;
+    """
     )
     cursor.execute(
-        """CREATE TABLE IF NOT EXISTS ticker_list (
-            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-            ticker TEXT NOT NULL,
+        """
+        CREATE TABLE IF NOT EXISTS ticker_list (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticker TEXT NOT NULL UNIQUE,
             category TEXT NOT NULL,
-            change FLOAT NOT NULL,
-            close FLOAT NOT NULL
-            )"""
+            change REAL NOT NULL,
+            close REAL NOT NULL,
+            FOREIGN KEY (ticker) REFERENCES symbols(ticker)
+                ON DELETE CASCADE ON UPDATE CASCADE
+        );
+    """
     )
     cursor.execute(
-        """CREATE TABLE IF NOT EXISTS favourites(
-            ticker TEXT NOT NULL,
+        """
+        CREATE TABLE IF NOT EXISTS favourites (
+            ticker TEXT PRIMARY KEY,
             category TEXT NOT NULL,
-            change FLOAT NOT NULL,
-            close FLOAT NOT NULL,
-            PRIMARY KEY (ticker)
-            )"""
+            change REAL NOT NULL,
+            close REAL NOT NULL,
+            FOREIGN KEY (ticker) REFERENCES symbols(ticker)
+                ON DELETE CASCADE ON UPDATE CASCADE
+        ) WITHOUT ROWID;
+    """
+    )
+    cursor.execute(
+        """CREATE TABLE IF NOT EXISTS symbols(
+            ticker TEXT PRIMARY KEY
+    )"""
     )
 
     cursor.execute(
-        """CREATE TABLE IF NOT EXISTS symbols(
-            ticker TEXT NOT NULL PRIMARY KEY
-    )"""
+        "CREATE INDEX IF NOT EXISTS idx_asset_category ON asset_prices (category);"
     )
     cursor.execute(
-        "CREATE UNIQUE INDEX IF NOT EXISTS idx_ticker ON asset_prices (ticker, date, timeframe)"
+        "CREATE INDEX IF NOT EXISTS idx_asset_ticker_date ON asset_prices (ticker, date DESC);"
+    )
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_ticker_category ON ticker_list (category);"
     )
 
     cursor.execute("PRAGMA foreign_keys = ON")
@@ -129,6 +150,7 @@ def insertDataIntoTickerList():
     return data
 
 
+
 def deleteDataFromFavourites(ticker: str):
     ticker = ticker.upper()
     with sqlite3.connect("asset_prices.db") as conn:
@@ -160,7 +182,6 @@ def readFavorites():
         data = cursor.fetchall()
     return data
 
-print(readFavorites())
 
 def get_data(
     ticker: str,
@@ -341,12 +362,12 @@ def read_db_v2(
             updated_data = pd.DataFrame(
                 updated_data, columns=[col[0] for col in cursor.description]
             )
-            print(updated_data)
 
     except Exception as e:
         raise ValueError(f"Error reading database : {e}")
 
     return updated_data
+
 
 
 def calculate_query_return(ticker: str, start_date: str, end_date: str) -> float:
