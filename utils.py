@@ -140,14 +140,24 @@ def insertDataIntoTickerList():
     with sqlite3.connect("asset_prices.db") as conn:
         cursor = conn.cursor()
         cursor.execute(
-            """INSERT OR IGNORE INTO ticker_list (ticker, category, change, close)
-                       SELECT ticker, category, change, close 
-                       FROM asset_prices
-                       WHERE date = (SELECT MAX(date) FROM asset_prices)
-                      """
+            """
+        INSERT INTO ticker_list (ticker, category, change, close)
+        SELECT ap.ticker, ap.category, ap.change, ap.close
+        FROM asset_prices ap
+        WHERE ap.date = (
+        SELECT MAX(a2.date)
+        FROM asset_prices a2
+        WHERE a2.ticker = ap.ticker
         )
-        data = cursor.fetchall()
-    return data
+        ON CONFLICT(ticker) DO UPDATE SET
+        category = excluded.category,
+        change = excluded.change,
+        close = excluded.close;
+        """
+        )
+        conn.commit()
+        return cursor.rowcount
+
 
 
 
@@ -367,7 +377,6 @@ def read_db_v2(
         raise ValueError(f"Error reading database : {e}")
 
     return updated_data
-
 
 
 def calculate_query_return(ticker: str, start_date: str, end_date: str) -> float:
