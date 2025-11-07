@@ -7,7 +7,9 @@ import sqlite3
 from datetime import datetime, timedelta
 import subprocess
 import asyncio
-
+import requests
+import os
+from dotenv import load_dotenv
 
 def create_db():
     conn = sqlite3.connect("asset_prices.db")
@@ -158,7 +160,22 @@ def insertDataIntoTickerList():
         conn.commit()
         return cursor.rowcount
 
+def getNews(query: str, lang:str = "en") -> dict : 
+    load_dotenv("/home/emanuelerossi/dev/mpattern/news_api.env")
+    api_key = os.getenv("NEWS_API_KEY")
+    url=f"https://newsdata.io/api/1/latest?apikey={api_key}&q={query}&language={lang}"
+    response=requests.get(url).json()['results']
 
+
+    news= []
+    for row in response:
+        news.append({
+            "title":row['title'],
+            "description":row['description'],
+            "source":row['source_url']
+        })
+    return news
+    
 
 
 def deleteDataFromFavourites(ticker: str):

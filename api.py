@@ -381,3 +381,12 @@ def get_patterns(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Pattern search failed: {str(e)}")
+
+
+@app.post("/get_news")
+def fetch_news(query: str = Query(..., description="Query for news search"), lang: str = Query(default="en", description="Language for news search")) :
+    try : 
+        news = getNews(query, lang)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"News search failed: {str(e)}")
+    return news
