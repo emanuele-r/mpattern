@@ -129,9 +129,23 @@ def readTickerList(category: str = None):
         else:
             cursor.execute(
                 """
-            SELECT  ticker, category, change, close 
-            FROM ticker_list
-            WHERE MAX(date)
+           SELECT 
+    t.ticker,
+    t.category,
+    t.change,
+    t.close,
+    a.price
+FROM ticker_list AS t
+JOIN asset_prices AS a 
+    ON t.ticker = a.ticker
+JOIN (
+    SELECT ticker, MAX(date) AS max_date
+    FROM asset_prices
+    GROUP BY ticker
+) AS latest
+    ON a.ticker = latest.ticker
+   AND a.date = latest.max_date;
+
         """,
             )
 
