@@ -133,8 +133,7 @@ def readTickerList(category: str = None):
     t.ticker,
     t.category,
     t.change,
-    t.close,
-    a.price
+    t.close
 FROM ticker_list AS t
 JOIN asset_prices AS a 
     ON t.ticker = a.ticker
