@@ -129,12 +129,12 @@ def readTickerList(category: str = None):
         else:
             cursor.execute(
                 """
-            CREATE TRIGGER IF NOT EXISTS update_ticker_list
-            BE ON asset_prices
             SELECT  ticker, category, change, close 
             FROM ticker_list
-        """
+            WHERE MAX(date)
+        """,
             )
+
         data = cursor.fetchall()
 
     return data
@@ -180,8 +180,6 @@ def getNews(query: str, lang: str = "en") -> dict:
             }
         )
     return news
-
-
 
 
 def deleteDataFromFavourites(ticker: str):
@@ -324,7 +322,10 @@ def read_db_v2(
                 "SELECT MAX (date) FROM asset_prices where ticker =? AND timeframe =?",
                 (ticker, timeframe),
             )
-            last_close= cursor.execute("SELECT close from asset_prices where ticker = ? AND timeframe = 1m", (ticker,))
+            last_close = cursor.execute(
+                "SELECT close from asset_prices where ticker = ? AND timeframe = 1m",
+                (ticker,),
+            )
             result = cursor.fetchone()
             isUptoDate = result[0] if result[0] is not None else None
 
@@ -351,7 +352,7 @@ def read_db_v2(
                         "INSERT OR REPLACE INTO asset_prices (ticker, date, open, high, low, close,change,category, period, timeframe) VALUES (?, ?, ?, ?, ?, ?, ?, ?,?, ?)",
                         records,
                     )
-            elif isUptoDate != today :
+            elif isUptoDate != today:
                 upDateData = get_data(
                     ticker=ticker,
                     start_date="2008-01-01",
@@ -366,7 +367,7 @@ def read_db_v2(
                             row["open"],
                             row["high"],
                             row["low"],
-                            row["close"] if row["close"] == last_close  else last_close,
+                            row["close"] if row["close"] == last_close else last_close,
                             row["change"],
                             row["category"],
                             row["period"],
@@ -401,8 +402,6 @@ def read_db_v2(
         raise ValueError(f"Error reading database : {e}")
 
     return updated_data
-
-
 
 
 def calculate_query_return(ticker: str, start_date: str, end_date: str) -> float:
