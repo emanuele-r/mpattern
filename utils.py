@@ -129,6 +129,8 @@ def readTickerList(category: str = None):
         else:
             cursor.execute(
                 """
+            CREATE TRIGGER IF NOT EXISTS update_ticker_list
+            BE ON asset_prices
             SELECT  ticker, category, change, close 
             FROM ticker_list
         """
@@ -180,7 +182,6 @@ def getNews(query: str, lang: str = "en") -> dict:
     return news
 
 
-getNews("apple")
 
 
 def deleteDataFromFavourites(ticker: str):
@@ -403,7 +404,6 @@ def read_db_v2(
 
 
 
-print(read_db_v2(ticker="AAPL", timeframe="1d"))
 
 def calculate_query_return(ticker: str, start_date: str, end_date: str) -> float:
     try:
