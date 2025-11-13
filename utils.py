@@ -11,6 +11,7 @@ import requests
 import os
 from dotenv import load_dotenv
 
+
 def create_db():
     conn = sqlite3.connect("asset_prices.db")
     cursor = conn.cursor()
@@ -160,22 +161,26 @@ def insertDataIntoTickerList():
         conn.commit()
         return cursor.rowcount
 
-def getNews(query: str, lang:str = "en") -> dict : 
+
+def getNews(query: str, lang: str = "en") -> dict:
     load_dotenv("/home/emanuelerossi/dev/mpattern/news_api.env")
     api_key = os.getenv("NEWS_API_KEY")
-    url=f"https://newsdata.io/api/1/latest?apikey={api_key}&q={query}&language={lang}"
-    response=requests.get(url).json()['results']
+    url = f"https://newsdata.io/api/1/latest?apikey={api_key}&q={query}&language={lang}"
+    response = requests.get(url).json()["results"]
 
-
-    news= []
+    news = []
     for row in response:
-        news.append({
-            "title":row['title'],
-            "description":row['description'],
-            "source":row['source_url']
-        })
+        news.append(
+            {
+                "title": row["title"],
+                "description": row["description"],
+                "source": row["source_url"],
+            }
+        )
     return news
-    
+
+
+getNews("apple")
 
 
 def deleteDataFromFavourites(ticker: str):
@@ -318,6 +323,7 @@ def read_db_v2(
                 "SELECT MAX (date) FROM asset_prices where ticker =? AND timeframe =?",
                 (ticker, timeframe),
             )
+            last_close= cursor.execute("SELECT close from asset_prices where ticker = ? AND timeframe = 1m", (ticker,))
             result = cursor.fetchone()
             isUptoDate = result[0] if result[0] is not None else None
 
@@ -344,7 +350,7 @@ def read_db_v2(
                         "INSERT OR REPLACE INTO asset_prices (ticker, date, open, high, low, close,change,category, period, timeframe) VALUES (?, ?, ?, ?, ?, ?, ?, ?,?, ?)",
                         records,
                     )
-            elif isUptoDate != today:
+            elif isUptoDate != today :
                 upDateData = get_data(
                     ticker=ticker,
                     start_date="2008-01-01",
@@ -359,7 +365,7 @@ def read_db_v2(
                             row["open"],
                             row["high"],
                             row["low"],
-                            row["close"],
+                            row["close"] if row["close"] == last_close  else last_close,
                             row["change"],
                             row["category"],
                             row["period"],
@@ -395,6 +401,9 @@ def read_db_v2(
 
     return updated_data
 
+
+
+print(read_db_v2(ticker="AAPL", timeframe="1d"))
 
 def calculate_query_return(ticker: str, start_date: str, end_date: str) -> float:
     try:
