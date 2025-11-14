@@ -304,7 +304,6 @@ def read_db_v2(
     period: str = None,
     timeframe: str = "1d",
 ) -> pd.DataFrame:
-
     ticker = ticker.upper()
 
     today = (
@@ -322,13 +321,14 @@ def read_db_v2(
                 (ticker, timeframe),
             )
             isUpToDate = cursor.fetchone()[0]
-
-            needs_update = isUpToDate != today
+            needs_update = (isUpToDate != today)
 
             if needs_update:
 
+                
                 if timeframe != "1d":
                     upData = get_data(ticker=ticker, timeframe=timeframe)
+
                 else:
                     upData = get_data(
                         ticker=ticker,
@@ -339,28 +339,28 @@ def read_db_v2(
 
                 if not upData.empty:
 
-                    upData = upData.copy()
-                    upData["ticker"] = ticker
-                    upData["timeframe"] = timeframe
+                    records = []
 
-                    upData["date"] = upData["date"].astype(str)
+                    for row in upData.itertuples(index=False):
+                        close_price = (
+                            row.close
+                            
+                        )
 
-                    records = list(
-                        upData[
-                            [
-                                "ticker",
-                                "date",
-                                "open",
-                                "high",
-                                "low",
-                                "close",
-                                "change",
-                                "category",
-                                "period",
-                                "timeframe",
-                            ]
-                        ].to_records(index=False)
-                    )
+                        records.append(
+                            (
+                                ticker,
+                                str(row.date),
+                                row.open,
+                                row.high,
+                                row.low,
+                                close_price,
+                                row.change,
+                                row.category,
+                                row.period,
+                                timeframe,
+                            )
+                        )
 
                     cursor.executemany(
                         """INSERT OR REPLACE INTO asset_prices 
@@ -369,6 +369,7 @@ def read_db_v2(
                         records,
                     )
 
+            
             if start_date and end_date:
                 cursor.execute(
                     "SELECT * FROM asset_prices "
@@ -382,12 +383,10 @@ def read_db_v2(
                 )
 
             rows = cursor.fetchall()
-            updated_data = pd.DataFrame(
-                rows, columns=[col[0] for col in cursor.description]
-            )
+            updated_data = pd.DataFrame(rows, columns=[col[0] for col in cursor.description])
 
     except Exception as e:
-        raise ValueError(f"Error reading database: {e}")
+        raise ValueError(f"Error reading database : {e}")
 
     return updated_data
 
