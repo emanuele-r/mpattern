@@ -129,23 +129,7 @@ def readTickerList(category: str = None):
         else:
             cursor.execute(
                 """
-           SELECT 
-    t.ticker,
-    t.category,
-    t.change,
-    t.close
-FROM ticker_list AS t
-JOIN asset_prices AS a 
-    ON t.ticker = a.ticker
-JOIN (
-    SELECT ticker, MAX(date) AS max_date
-    FROM asset_prices
-    GROUP BY ticker
-) AS latest
-    ON a.ticker = latest.ticker
-   AND a.date = latest.max_date;
-
-        """,
+                 select s.ticker, s.category,s.change,s.close, t.date from ticker_list as s join asset_prices as t on s.ticker=t.ticker group by s.ticker order by date desc; """,
             )
 
         data = cursor.fetchall()
@@ -336,14 +320,17 @@ def read_db_v2(
                 (ticker, timeframe),
             )
             result = cursor.fetchone()
-            
-            cursor.execute(
+
+            curs = conn.cursor()
+
+            curs.execute(
                 "SELECT close from asset_prices where ticker = ? AND timeframe = '1m' ORDER BY date DESC LIMIT 1",
                 (ticker,),
             )
-            last_close = cursor.fetchone()
+            last_close = curs.fetchone()
+
             
-            
+
             isUptoDate = result[0] if result[0] is not None else None
 
             if isUptoDate != today and timeframe != "1d":
@@ -384,7 +371,16 @@ def read_db_v2(
                             row["open"],
                             row["high"],
                             row["low"],
-                            row["close"] if row["close"] == last_close[0] and last_close[0] is not None else last_close[0] if last_close[0] is not None else row["close"],
+                            (
+                                row["close"]
+                                if row["close"] == last_close[0]
+                                and last_close[0] is not None
+                                else (
+                                    last_close[0]
+                                    if last_close[0] is not None
+                                    else row["close"]
+                                )
+                            ),
                             row["change"],
                             row["category"],
                             row["period"],
@@ -421,7 +417,6 @@ def read_db_v2(
     return updated_data
 
 
-read_db_v2("AAPL", timeframe="1d")
 
 
 def calculate_query_return(ticker: str, start_date: str, end_date: str) -> float:
