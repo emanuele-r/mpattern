@@ -129,7 +129,7 @@ def readTickerList(category: str = None):
         else:
             cursor.execute(
                 """
-                 select s.ticker, s.category,s.change,s.close, t.date from ticker_list as s join asset_prices as t on s.ticker=t.ticker group by s.ticker order by date desc; """,
+                 select s.ticker, s.category,s.change,s.close,  from ticker_list as s join asset_prices as t on s.ticker=t.ticker group by s.ticker order by date desc; """,
             )
 
         data = cursor.fetchall()
