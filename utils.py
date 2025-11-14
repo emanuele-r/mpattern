@@ -297,7 +297,7 @@ def popoulateDb():
     return
 
 
-def read_db_v2(
+def read_db_v(
     ticker: str,
     start_date: str = None,
     end_date: str = None,
@@ -328,6 +328,7 @@ def read_db_v2(
                 (ticker,),
             )
             last_close = curs.fetchone()
+            last_close_value = last_close[0] if last_close else None
 
             
 
@@ -416,6 +417,114 @@ def read_db_v2(
 
     return updated_data
 
+def read_db_v2(
+    ticker: str,
+    start_date: str = None,
+    end_date: str = None,
+    period: str = None,
+    timeframe: str = "1d",
+) -> pd.DataFrame:
+    ticker = ticker.upper()
+
+    today = (
+        datetime.now().strftime("%Y-%m-%d")
+        if timeframe == "1d"
+        else datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    )
+
+    try:
+        with sqlite3.connect("asset_prices.db") as conn:
+            cursor = conn.cursor()
+
+            cursor.execute(
+                "SELECT MAX(date) FROM asset_prices WHERE ticker = ? AND timeframe = ?",
+                (ticker, timeframe),
+            )
+            isUpToDate = cursor.fetchone()[0]
+
+            cursor.execute(
+                "SELECT close FROM asset_prices "
+                "WHERE ticker = ? AND timeframe = '1m' "
+                "ORDER BY date DESC LIMIT 1",
+                (ticker,),
+            )
+            last_close = cursor.fetchone()
+            last_close_value = last_close[0] if last_close else None
+
+          
+            needs_update = (isUpToDate != today)
+
+            if needs_update:
+
+              
+                if timeframe != "1d":
+                    upData = get_data(ticker=ticker, timeframe=timeframe)
+
+                else:
+                    upData = get_data(
+                        ticker=ticker,
+                        start_date="2008-01-01",
+                        end_date=today,
+                        timeframe=timeframe,
+                    )
+
+                if not upData.empty:
+
+                    records = []
+
+                    for row in upData.itertuples(index=False):
+                        close_price = (
+                            row.close
+                            if timeframe != "1d"
+                            else (
+                                row.close
+                                if (last_close_value and row.close == last_close_value)
+                                else (last_close_value or row.close)
+                            )
+                        )
+
+                        records.append(
+                            (
+                                ticker,
+                                str(row.date),
+                                row.open,
+                                row.high,
+                                row.low,
+                                close_price,
+                                row.change,
+                                row.category,
+                                row.period,
+                                timeframe,
+                            )
+                        )
+
+                    cursor.executemany(
+                        """INSERT OR REPLACE INTO asset_prices 
+                        (ticker, date, open, high, low, close, change, category, period, timeframe)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        records,
+                    )
+
+           
+            if start_date and end_date:
+                cursor.execute(
+                    "SELECT * FROM asset_prices "
+                    "WHERE date BETWEEN ? AND ? AND ticker = ? AND timeframe = ?",
+                    (start_date, end_date, ticker, timeframe),
+                )
+            else:
+                cursor.execute(
+                    "SELECT * FROM asset_prices WHERE ticker = ? AND timeframe = ?",
+                    (ticker, timeframe),
+                )
+
+            rows = cursor.fetchall()
+            updated_data = pd.DataFrame(rows, columns=[col[0] for col in cursor.description])
+
+    except Exception as e:
+        raise ValueError(f"Error reading database : {e}")
+
+    return updated_data
 
 
 

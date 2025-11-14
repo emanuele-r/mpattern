@@ -138,7 +138,7 @@ def get_tickers(category: str = Query(default=None, description="Category")):
             )
 
         prices = {"tickers": tickers}
-        print(prices)
+        
         return prices
 
     except Exception as e:
