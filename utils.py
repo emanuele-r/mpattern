@@ -80,6 +80,8 @@ def create_db():
         "CREATE INDEX IF NOT EXISTS idx_ticker_category ON ticker_list (category);"
     )
 
+    
+
     cursor.execute("PRAGMA foreign_keys = ON")
     conn.commit()
     conn.close()
@@ -129,7 +131,13 @@ def readTickerList(category: str = None):
         else:
             cursor.execute(
                 """
-                 select s.ticker, s.category,s.change,s.close  from ticker_list as s join asset_prices as t on s.ticker=t.ticker group by s.ticker order by date desc; """,
+                SELECT tl.ticker, tl.category, tl.change, tl.close
+                FROM ticker_list tl
+                WHERE tl.ticker IN (
+                    SELECT ap.ticker
+                    FROM asset_prices ap
+                    WHERE ap.date = (SELECT MAX(date) FROM asset_prices WHERE ticker = ap.ticker)
+                    )""",
             )
 
         data = cursor.fetchall()
