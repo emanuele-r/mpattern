@@ -343,6 +343,7 @@ def read_db_v2(
             )
             last_close = cursor.fetchone()
             
+            
             isUptoDate = result[0] if result[0] is not None else None
 
             if isUptoDate != today and timeframe != "1d":
@@ -383,7 +384,7 @@ def read_db_v2(
                             row["open"],
                             row["high"],
                             row["low"],
-                            row["close"] if row["close"] == last_close and last_close is not None else last_close if last_close is not None else row["close"],
+                            row["close"] if row["close"] == last_close[0] and last_close[0] is not None else last_close[0] if last_close[0] is not None else row["close"],
                             row["change"],
                             row["category"],
                             row["period"],
@@ -420,7 +421,7 @@ def read_db_v2(
     return updated_data
 
 
-print(read_db_v2("AAPL", timeframe="1d"))
+read_db_v2("AAPL", timeframe="1d")
 
 
 def calculate_query_return(ticker: str, start_date: str, end_date: str) -> float:
