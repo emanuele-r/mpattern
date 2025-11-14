@@ -335,11 +335,14 @@ def read_db_v2(
                 "SELECT MAX (date) FROM asset_prices where ticker =? AND timeframe =?",
                 (ticker, timeframe),
             )
-            last_close = cursor.execute(
+            result = cursor.fetchone()
+            
+            cursor.execute(
                 "SELECT close from asset_prices where ticker = ? AND timeframe = '1m' ORDER BY date DESC LIMIT 1",
                 (ticker,),
             )
-            result = cursor.fetchone()
+            last_close = cursor.fetchone()
+            
             isUptoDate = result[0] if result[0] is not None else None
 
             if isUptoDate != today and timeframe != "1d":
@@ -380,7 +383,7 @@ def read_db_v2(
                             row["open"],
                             row["high"],
                             row["low"],
-                            row["close"] if row["close"] == last_close else last_close,
+                            row["close"] if row["close"] == last_close and last_close is not None else last_close if last_close is not None else row["close"],
                             row["change"],
                             row["category"],
                             row["period"],
@@ -415,6 +418,9 @@ def read_db_v2(
         raise ValueError(f"Error reading database : {e}")
 
     return updated_data
+
+
+print(read_db_v2("AAPL", timeframe="1d"))
 
 
 def calculate_query_return(ticker: str, start_date: str, end_date: str) -> float:
