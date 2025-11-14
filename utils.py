@@ -336,7 +336,7 @@ def read_db_v2(
                 (ticker, timeframe),
             )
             last_close = cursor.execute(
-                "SELECT close from asset_prices where ticker = ? AND timeframe = '1m' ORDER BY MAX(date) DESC LIMIT 1",
+                "SELECT close from asset_prices where ticker = ? AND timeframe = '1m' ORDER BY date DESC LIMIT 1",
                 (ticker,),
             )
             result = cursor.fetchone()
